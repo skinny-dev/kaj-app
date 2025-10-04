@@ -1,0 +1,5 @@
+{
+  "name": "KAJ online",
+  "description": "A modern and user-friendly web application for ordering food online from Kaj Cafe Restaurant. Users can browse the menu, add items to their cart, and place an order for delivery.",
+  "requestFramePermissions": []
+}
