@@ -1,8 +1,7 @@
 {
-  "app": "kaj-app",
-  "port": 80,
+  "platform": "static",
+  "app": "kaj-app", 
   "build": {
     "location": "iran"
-  },
-  "disks": []
+  }
 }
