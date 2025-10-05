@@ -1,9 +1,8 @@
 {
-  "platform": "static",
+  "platform": "node",
   "app": "kaj-app",
+  "port": 3000,
   "build": {
     "location": "iran"
-  },
-  "buildCommand": "npm run build",
-  "publishDirectory": "dist"
+  }
 }
