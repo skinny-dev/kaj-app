@@ -4,11 +4,7 @@
 
 Customer-facing web application for KAJ Restaurant. Built with React, Vite, and TypeScript.</div>
 
-
-
 ## 🚀 Quick Deploy to Liara# Run and deploy your AI Studio app
-
-
 
 ### PrerequisitesThis contains everything you need to run your app locally.
 
@@ -16,15 +12,11 @@ Customer-facing web application for KAJ Restaurant. Built with React, Vite, and 
 
 - Production API running at: `https://api-cafe-kaj.liara.run`View your app in AI Studio: https://ai.studio/apps/drive/1yE7QPvzD81Ie-UU_28H2vEu5C8rsHtNq
 
-
-
 ### Deploy Now (Easiest Method)## Run Locally
 
+**1. Build the app:\*\***Prerequisites:\*\* Node.js
 
-
-**1. Build the app:****Prerequisites:**  Node.js
-
-```bash
+````bash
 
 cd C:\Users\cybor\OneDrive\Documents\GitHub\kaj-app
 
@@ -59,10 +51,10 @@ npm run build   `npm install`
 ## 🌐 Configuration
 
 ### Already Configured:
-✅ Production API: `https://api-cafe-kaj.liara.run/v1`  
-✅ WebSocket: `wss://api-cafe-kaj.liara.run`  
-✅ Liara deployment settings in `liara.json`  
-✅ Environment variables in `.env.production`  
+✅ Production API: `https://api-cafe-kaj.liara.run/v1`
+✅ WebSocket: `wss://api-cafe-kaj.liara.run`
+✅ Liara deployment settings in `liara.json`
+✅ Environment variables in `.env.production`
 
 **No additional setup needed!**
 
@@ -79,7 +71,7 @@ cp .env.example .env.local
 
 # Start dev server
 npm run dev
-```
+````
 
 App runs on: `http://localhost:5173`
 
@@ -102,7 +94,7 @@ App runs on: `http://localhost:5173`
 ```
 kaj-app/
 ├── components/     # React components
-├── pages/          # Page components  
+├── pages/          # Page components
 ├── context/        # State management
 ├── services/       # API integration
 └── public/         # Static assets
@@ -113,12 +105,14 @@ kaj-app/
 ## 🔧 Environment Variables
 
 **Development** (`.env.local`):
+
 ```bash
 VITE_API_URL=http://localhost:3000/v1
 VITE_WS_URL=ws://localhost:3000
 ```
 
 **Production** (`.env.production` - already set):
+
 ```bash
 VITE_API_URL=https://api-cafe-kaj.liara.run/v1
 VITE_WS_URL=wss://api-cafe-kaj.liara.run
@@ -142,10 +136,12 @@ VITE_WS_URL=wss://api-cafe-kaj.liara.run
 ## 🐛 Troubleshooting
 
 **API not connecting:**
+
 - Verify API health: `https://api-cafe-kaj.liara.run/health`
 - Check browser console for errors
 
 **Build errors:**
+
 ```bash
 rm -rf node_modules package-lock.json
 npm install
@@ -153,6 +149,7 @@ npm run build
 ```
 
 **WebSocket issues:**
+
 - Ensure using `wss://` (not `ws://`)
 - Check API WebSocket support
 

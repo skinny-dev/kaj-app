@@ -1,7 +1,9 @@
 {
   "platform": "static",
-  "app": "kaj-app", 
+  "app": "kaj-app",
   "build": {
     "location": "iran"
-  }
+  },
+  "buildCommand": "npm run build",
+  "publishDirectory": "dist"
 }

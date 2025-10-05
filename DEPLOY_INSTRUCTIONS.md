@@ -1,6 +1,7 @@
 # 🚀 DEPLOY KAJ-APP TO LIARA
 
 ## Current Status:
+
 ✅ Production API configured: `https://api-cafe-kaj.liara.run`
 ✅ Environment variables set in `.env.production`
 ✅ Liara config ready in `liara.json`
@@ -27,11 +28,13 @@ This creates the `dist/` folder with production-ready files.
 #### Method A: Liara Console (EASIEST - RECOMMENDED)
 
 1. **Create ZIP file:**
+
    ```powershell
    Compress-Archive -Path "C:\Users\cybor\OneDrive\Documents\GitHub\kaj-app\*" -DestinationPath "C:\Users\cybor\OneDrive\Documents\GitHub\kaj-app-deploy.zip" -Force
    ```
 
 2. **Upload to Liara:**
+
    - Go to: https://console.liara.ir
    - Click "برنامه‌های من" (My Apps)
    - Click "+ ایجاد برنامه" (Create App) or select existing `kaj-app`
@@ -64,10 +67,12 @@ liara deploy --app kaj-app --platform react
 ### Step 3: Verify Deployment
 
 1. **Check app is live:**
+
    - Visit: https://kaj-app.liara.run
    - Should load the home page
 
 2. **Test API connection:**
+
    - Try browsing the menu
    - Check browser console for errors
 
@@ -81,6 +86,7 @@ liara deploy --app kaj-app --platform react
 ## 🔍 What Gets Deployed
 
 The app will:
+
 - ✅ Connect to `https://api-cafe-kaj.liara.run/v1` automatically
 - ✅ Use WebSocket at `wss://api-cafe-kaj.liara.run`
 - ✅ Serve on port 80 (standard HTTP)
@@ -94,15 +100,18 @@ The app will:
 After successful deployment:
 
 1. **Test Login:**
+
    - Use any phone number
    - OTP: `123456` (test mode)
 
 2. **Test Menu:**
+
    - Browse categories
    - View products
    - Check images load
 
 3. **Test Cart:**
+
    - Add items to cart
    - Modify quantities
    - Apply addons
@@ -116,6 +125,7 @@ After successful deployment:
 ## 🐛 Troubleshooting
 
 ### Build Fails
+
 ```powershell
 # Clean install
 cd C:\Users\cybor\OneDrive\Documents\GitHub\kaj-app
@@ -126,11 +136,13 @@ npm run build
 ```
 
 ### API Not Connecting
+
 - Verify API is running: https://api-cafe-kaj.liara.run/health
 - Check browser console (F12) for CORS errors
 - Verify `.env.production` has correct URLs
 
 ### App Not Loading
+
 - Check Liara logs in console
 - Verify build completed successfully
 - Check if port 80 is set in Liara
@@ -140,6 +152,7 @@ npm run build
 ## 📱 Mobile Testing
 
 After deployment, test on:
+
 - 📱 Mobile browser (iOS Safari, Android Chrome)
 - 💻 Desktop browser (Chrome, Firefox, Safari)
 - 📱 Tablet (iPad, Android tablet)
@@ -158,6 +171,7 @@ After deployment, test on:
 ## 📊 Monitoring
 
 After deployment, monitor:
+
 - Liara console for logs
 - Browser console for client errors
 - API logs for backend issues
@@ -168,6 +182,7 @@ After deployment, monitor:
 ## ✅ Success Criteria
 
 Deployment is successful when:
+
 - ✅ App loads at `https://kaj-app.liara.run`
 - ✅ Menu items display correctly
 - ✅ Login with OTP works
@@ -180,6 +195,7 @@ Deployment is successful when:
 ## 🆘 Need Help?
 
 If deployment fails:
+
 1. Check Liara console logs
 2. Verify build succeeded locally first
 3. Test API connection manually
