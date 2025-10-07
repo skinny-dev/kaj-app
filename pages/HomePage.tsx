@@ -11,11 +11,11 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate }) => {
   const { currentUser } = useAuth();
   const restaurantPhone = "02155285408";
 
-  // Check if restaurant is open (11 AM to 12 AM)
+  // Check if restaurant is open (12 PM to 12 AM)
   const isRestaurantOpen = () => {
     const now = new Date();
     const currentHour = now.getHours();
-    // Open from 12 AM to 12 AM (midnight)
+    // Open from 12 PM (noon) to 12 AM (midnight)
     return currentHour >= 12 && currentHour < 24;
   };
 
@@ -59,7 +59,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate }) => {
           <p className={`font-semibold ${isOpen ? 'text-green-400' : 'text-red-400'}`}>
             {isOpen ? 'باز است' : 'بسته است'}
           </p>
-          <p className="text-sm text-gray-400">از ساعت ۱۱ صبح تا ۱۲ شب</p>
+          <p className="text-sm text-gray-400">از ساعت ۱۲ ظهر تا ۱۲ شب</p>
         </div>
       </header>
 
