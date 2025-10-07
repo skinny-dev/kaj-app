@@ -9,14 +9,14 @@ interface HomePageProps {
 
 export const HomePage: React.FC<HomePageProps> = ({ onNavigate }) => {
   const { currentUser } = useAuth();
-  const restaurantPhone = "021-9466555";
+  const restaurantPhone = "02155285408";
 
   // Check if restaurant is open (11 AM to 12 AM)
   const isRestaurantOpen = () => {
     const now = new Date();
     const currentHour = now.getHours();
-    // Open from 11 AM to 12 AM (midnight)
-    return currentHour >= 11 && currentHour < 24;
+    // Open from 12 AM to 12 AM (midnight)
+    return currentHour >= 12 && currentHour < 24;
   };
 
   const isOpen = isRestaurantOpen();
@@ -82,7 +82,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate }) => {
         </button>
         <div className="text-center">
           <a href={`tel:${restaurantPhone}`} className="text-lg tracking-wider">
-            94 66 555 - 021
+            55 28 54 08 - 021
           </a>
           <p className="text-gray-400 mt-2">
             تهران، چهاردانگه، مجتمع افشین، کافه رستوران کاج
