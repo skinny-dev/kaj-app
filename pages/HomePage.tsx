@@ -11,11 +11,27 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate }) => {
   const { currentUser } = useAuth();
   const restaurantPhone = "021-9466555";
 
+  // Check if restaurant is open (11 AM to 12 AM)
+  const isRestaurantOpen = () => {
+    const now = new Date();
+    const currentHour = now.getHours();
+    // Open from 11 AM to 12 AM (midnight)
+    return currentHour >= 11 && currentHour < 24;
+  };
+
+  const isOpen = isRestaurantOpen();
+
   const handleProfileClick = () => {
     if (currentUser) {
       onNavigate("profile");
     } else {
       onNavigate("login");
+    }
+  };
+
+  const handleOrderClick = () => {
+    if (isOpen) {
+      onNavigate("menu");
     }
   };
 
@@ -40,8 +56,10 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate }) => {
           </a>
         </div>
         <div className="text-right">
-          <p className="text-green-400 font-semibold">باز است</p>
-          <p className="text-sm text-gray-400">از ساعت ۸ صبح تا ۱۲ شب</p>
+          <p className={`font-semibold ${isOpen ? 'text-green-400' : 'text-red-400'}`}>
+            {isOpen ? 'باز است' : 'بسته است'}
+          </p>
+          <p className="text-sm text-gray-400">از ساعت ۱۱ صبح تا ۱۲ شب</p>
         </div>
       </header>
 
@@ -52,10 +70,15 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate }) => {
 
       <footer className="flex flex-col gap-4">
         <button
-          onClick={() => onNavigate("menu")}
-          className="w-full bg-green-500 text-black font-bold py-4 rounded-lg text-lg transition-transform transform hover:scale-105"
+          onClick={handleOrderClick}
+          disabled={!isOpen}
+          className={`w-full font-bold py-4 rounded-lg text-lg transition-all duration-200 ${
+            isOpen 
+              ? 'bg-green-500 text-black hover:scale-105 hover:bg-green-600' 
+              : 'bg-gray-600 text-gray-300 cursor-not-allowed opacity-70'
+          }`}
         >
-          سفارش آنلاین
+          {isOpen ? 'سفارش آنلاین' : 'بسته است'}
         </button>
         <div className="text-center">
           <a href={`tel:${restaurantPhone}`} className="text-lg tracking-wider">

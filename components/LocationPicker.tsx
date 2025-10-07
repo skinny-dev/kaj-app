@@ -470,21 +470,21 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
           </div>
         )}
         
-        {/* Floating location button */}
+        {/* Floating location button - positioned higher for better accessibility */}
         {!readOnly && (
-          <div className="absolute bottom-4 right-4 z-[1001]">
+          <div className="absolute top-4 right-4 z-[1001]">
             <button
               type="button"
               onClick={handleUseMyLocation}
               disabled={locationLoading}
-              className="w-12 h-12 bg-white shadow-lg rounded-full flex items-center justify-center border-2 border-gray-200 hover:border-blue-500 hover:shadow-xl transition-all duration-200 disabled:opacity-50"
-              title="استفاده از موقعیت فعلی"
+              className="w-14 h-14 bg-blue-500 hover:bg-blue-600 shadow-xl rounded-full flex items-center justify-center border-3 border-white hover:scale-105 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              title="استفاده از موقعیت فعلی من"
             >
               {locationLoading ? (
-                <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                <div className="w-6 h-6 border-3 border-white border-t-transparent rounded-full animate-spin"></div>
               ) : (
                 <svg 
-                  className="w-6 h-6 text-blue-600" 
+                  className="w-7 h-7 text-white drop-shadow-sm" 
                   fill="currentColor" 
                   viewBox="0 0 24 24"
                   xmlns="http://www.w3.org/2000/svg"
@@ -493,6 +493,10 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
                 </svg>
               )}
             </button>
+            {/* Tooltip for better UX */}
+            <div className="absolute top-full right-0 mt-2 px-3 py-1 bg-gray-900 text-white text-sm rounded-lg opacity-0 hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none">
+              موقعیت من
+            </div>
           </div>
         )}
         {loading && !initError && (

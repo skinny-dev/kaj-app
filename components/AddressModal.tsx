@@ -142,9 +142,17 @@ const AddressModal: React.FC<AddressModalProps> = ({
               <button
                 type="button"
                 onClick={handleUseMyLocation}
-                className="absolute bottom-4 right-4 z-[2] bg-white text-black rounded-full shadow px-4 py-2 text-sm"
+                className="absolute top-4 right-4 z-[2] w-12 h-12 bg-blue-500 hover:bg-blue-600 text-white rounded-full shadow-xl flex items-center justify-center hover:scale-105 transition-all duration-200"
+                title="استفاده از موقعیت فعلی من"
               >
-                موقعیت من
+                <svg 
+                  className="w-6 h-6 text-white" 
+                  fill="currentColor" 
+                  viewBox="0 0 24 24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path d="M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm8.94 3A8.994 8.994 0 0 0 13 3.06V1h-2v2.06A8.994 8.994 0 0 0 3.06 11H1v2h2.06A8.994 8.994 0 0 0 11 20.94V23h2v-2.06A8.994 8.994 0 0 0 20.94 13H23v-2h-2.06zM12 19c-3.87 0-7-3.13-7-7s3.13-7 7-7 7 3.13 7 7-3.13 7-7 7z"/>
+                </svg>
               </button>
             </div>
             <div className="sticky bottom-0 bg-gray-900 pt-1">
