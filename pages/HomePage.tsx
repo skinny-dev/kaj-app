@@ -1,6 +1,11 @@
 import React from "react";
 import type { Page } from "../App";
-import { PhoneIcon, MapPinIcon, UserIcon, EmailIcon } from "../components/icons/Icons";
+import {
+  PhoneIcon,
+  MapPinIcon,
+  UserIcon,
+  EmailIcon,
+} from "../components/icons/Icons";
 import { useAuth } from "../context/AuthContext";
 
 interface HomePageProps {
@@ -56,8 +61,12 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate }) => {
           </a>
         </div>
         <div className="text-right">
-          <p className={`font-semibold ${isOpen ? 'text-green-400' : 'text-red-400'}`}>
-            {isOpen ? 'باز است' : 'بسته است'}
+          <p
+            className={`font-semibold ${
+              isOpen ? "text-green-400" : "text-red-400"
+            }`}
+          >
+            {isOpen ? "باز است" : "بسته است"}
           </p>
           <p className="text-sm text-gray-400">از ساعت ۱۲ ظهر تا ۱۲ شب</p>
         </div>
@@ -73,22 +82,28 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate }) => {
           onClick={handleOrderClick}
           disabled={!isOpen}
           className={`w-full font-bold py-4 rounded-lg text-lg transition-all duration-200 ${
-            isOpen 
-              ? 'bg-green-500 text-black hover:scale-105 hover:bg-green-600' 
-              : 'bg-gray-600 text-gray-300 cursor-not-allowed opacity-70'
+            isOpen
+              ? "bg-green-500 text-black hover:scale-105 hover:bg-green-600"
+              : "bg-gray-600 text-gray-300 cursor-not-allowed opacity-70"
           }`}
         >
-          {isOpen ? 'سفارش آنلاین' : 'بسته است'}
+          {isOpen ? "سفارش آنلاین" : "بسته است"}
         </button>
-        
+        <a
+          href="https://www.google.com/maps"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="w-full bg-gray-800 text-white font-semibold py-3 rounded-lg text-center flex items-center justify-center gap-2 transition-colors hover:bg-gray-700"
+        >
+          <MapPinIcon />
+          مسیریابی
+        </a>
         {/* Contact Information */}
         <div className="bg-gray-900 rounded-lg p-4 space-y-3">
-          <h3 className="text-lg font-semibold text-white text-center mb-3">اطلاعات تماس</h3>
-          
           <div className="space-y-2">
             {/* Restaurant Phone */}
-            <a 
-              href={`tel:${restaurantPhone}`} 
+            <a
+              href={`tel:${restaurantPhone}`}
               className="flex items-center gap-3 text-gray-300 hover:text-white transition-colors"
             >
               <PhoneIcon />
@@ -97,10 +112,10 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate }) => {
                 <span className="mr-2 font-mono">02155285408</span>
               </div>
             </a>
-            
+
             {/* Management Phone */}
-            <a 
-              href="tel:09367467580" 
+            <a
+              href="tel:09367467580"
               className="flex items-center gap-3 text-gray-300 hover:text-white transition-colors"
             >
               <PhoneIcon />
@@ -109,10 +124,10 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate }) => {
                 <span className="mr-2 font-mono">09367467580</span>
               </div>
             </a>
-            
+
             {/* Email */}
-            <a 
-              href="mailto:info@cafe-kaj.ir" 
+            <a
+              href="mailto:info@cafe-kaj.ir"
               className="flex items-center gap-3 text-gray-300 hover:text-white transition-colors"
             >
               <EmailIcon />
@@ -121,7 +136,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate }) => {
                 <span className="mr-2">info@cafe-kaj.ir</span>
               </div>
             </a>
-            
+
             {/* Address */}
             <div className="flex items-start gap-3 text-gray-300">
               <MapPinIcon />
@@ -134,16 +149,6 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate }) => {
             </div>
           </div>
         </div>
-        
-        <a
-          href="https://www.google.com/maps"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="w-full bg-gray-800 text-white font-semibold py-3 rounded-lg text-center flex items-center justify-center gap-2 transition-colors hover:bg-gray-700"
-        >
-          <MapPinIcon />
-          مسیریابی
-        </a>
       </footer>
     </div>
   );
