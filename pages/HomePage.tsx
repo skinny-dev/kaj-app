@@ -1,6 +1,6 @@
 import React from "react";
 import type { Page } from "../App";
-import { PhoneIcon, MapPinIcon, UserIcon } from "../components/icons/Icons";
+import { PhoneIcon, MapPinIcon, UserIcon, EmailIcon } from "../components/icons/Icons";
 import { useAuth } from "../context/AuthContext";
 
 interface HomePageProps {
@@ -80,14 +80,61 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate }) => {
         >
           {isOpen ? 'سفارش آنلاین' : 'بسته است'}
         </button>
-        <div className="text-center">
-          <a href={`tel:${restaurantPhone}`} className="text-lg tracking-wider">
-            021 - 5528 5408
-          </a>
-          <p className="text-gray-400 mt-2">
-            تهران، چهاردانگه، مجتمع افشین، کافه رستوران کاج
-          </p>
+        
+        {/* Contact Information */}
+        <div className="bg-gray-900 rounded-lg p-4 space-y-3">
+          <h3 className="text-lg font-semibold text-white text-center mb-3">اطلاعات تماس</h3>
+          
+          <div className="space-y-2">
+            {/* Restaurant Phone */}
+            <a 
+              href={`tel:${restaurantPhone}`} 
+              className="flex items-center gap-3 text-gray-300 hover:text-white transition-colors"
+            >
+              <PhoneIcon />
+              <div>
+                <span className="text-sm text-gray-400">کافه:</span>
+                <span className="mr-2 font-mono">02155285408</span>
+              </div>
+            </a>
+            
+            {/* Management Phone */}
+            <a 
+              href="tel:09367467580" 
+              className="flex items-center gap-3 text-gray-300 hover:text-white transition-colors"
+            >
+              <PhoneIcon />
+              <div>
+                <span className="text-sm text-gray-400">مدیریت:</span>
+                <span className="mr-2 font-mono">09367467580</span>
+              </div>
+            </a>
+            
+            {/* Email */}
+            <a 
+              href="mailto:info@cafe-kaj.ir" 
+              className="flex items-center gap-3 text-gray-300 hover:text-white transition-colors"
+            >
+              <EmailIcon />
+              <div>
+                <span className="text-sm text-gray-400">پشتیبانی:</span>
+                <span className="mr-2">info@cafe-kaj.ir</span>
+              </div>
+            </a>
+            
+            {/* Address */}
+            <div className="flex items-start gap-3 text-gray-300">
+              <MapPinIcon />
+              <div>
+                <span className="text-sm text-gray-400">آدرس:</span>
+                <p className="mr-2 text-sm leading-relaxed">
+                  تهران، چهاردانگه، مجتمع افشین، کافه کاج
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
+        
         <a
           href="https://www.google.com/maps"
           target="_blank"
