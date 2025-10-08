@@ -82,7 +82,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate }) => {
         </button>
         <div className="text-center">
           <a href={`tel:${restaurantPhone}`} className="text-lg tracking-wider">
-            55 28 54 08 - 021
+            021 - 5528 5408
           </a>
           <p className="text-gray-400 mt-2">
             تهران، چهاردانگه، مجتمع افشین، کافه رستوران کاج

@@ -470,35 +470,7 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
           </div>
         )}
         
-        {/* Floating location button - positioned higher for better accessibility */}
-        {!readOnly && (
-          <div className="absolute top-4 right-4 z-[1001]">
-            <button
-              type="button"
-              onClick={handleUseMyLocation}
-              disabled={locationLoading}
-              className="w-14 h-14 bg-blue-500 hover:bg-blue-600 shadow-xl rounded-full flex items-center justify-center border-3 border-white hover:scale-105 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-              title="استفاده از موقعیت فعلی من"
-            >
-              {locationLoading ? (
-                <div className="w-6 h-6 border-3 border-white border-t-transparent rounded-full animate-spin"></div>
-              ) : (
-                <svg 
-                  className="w-7 h-7 text-white drop-shadow-sm" 
-                  fill="currentColor" 
-                  viewBox="0 0 24 24"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path d="M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm8.94 3A8.994 8.994 0 0 0 13 3.06V1h-2v2.06A8.994 8.994 0 0 0 3.06 11H1v2h2.06A8.994 8.994 0 0 0 11 20.94V23h2v-2.06A8.994 8.994 0 0 0 20.94 13H23v-2h-2.06zM12 19c-3.87 0-7-3.13-7-7s3.13-7 7-7 7 3.13 7 7-3.13 7-7 7z"/>
-                </svg>
-              )}
-            </button>
-            {/* Tooltip for better UX */}
-            <div className="absolute top-full right-0 mt-2 px-3 py-1 bg-gray-900 text-white text-sm rounded-lg opacity-0 hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none">
-              موقعیت من
-            </div>
-          </div>
-        )}
+
         {loading && !initError && (
           <div className="absolute inset-0 z-[5] flex items-center justify-center bg-black/20">
             <span className="text-xs text-gray-200">در حال بارگذاری نقشه...</span>
@@ -547,6 +519,34 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
           </div>
         )}
       </div>
+      {!readOnly && (
+        <button
+          type="button"
+          onClick={handleUseMyLocation}
+          disabled={locationLoading}
+          className="w-full flex items-center justify-center gap-2 bg-gray-700 hover:bg-gray-600 text-white border border-gray-600 hover:border-gray-500 rounded-lg py-2.5 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+          title="استفاده از موقعیت فعلی من"
+        >
+          {locationLoading ? (
+            <>
+              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+              <span className="text-sm font-medium">در حال دریافت...</span>
+            </>
+          ) : (
+            <>
+              <svg 
+                className="w-4 h-4 text-white" 
+                fill="currentColor" 
+                viewBox="0 0 24 24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path d="M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm8.94 3A8.994 8.994 0 0 0 13 3.06V1h-2v2.06A8.994 8.994 0 0 0 3.06 11H1v2h2.06A8.994 8.994 0 0 0 11 20.94V23h2v-2.06A8.994 8.994 0 0 0 20.94 13H23v-2h-2.06zM12 19c-3.87 0-7-3.13-7-7s3.13-7 7-7 7 3.13 7 7-3.13 7-7 7z"/>
+              </svg>
+              <span className="text-sm font-medium">موقعیت من</span>
+            </>
+          )}
+        </button>
+      )}
       {!hideConfirmButton && (
         <div className="flex gap-2">
           {onCancel && (
