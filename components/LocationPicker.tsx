@@ -257,6 +257,14 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
         }
 
         marker = L.marker([initialCenter.lat, initialCenter.lng], { draggable: !readOnly }).addTo(map);
+        // If user requested geolocation before map finished initializing,
+        // apply the latest latlng state to the newly created map & marker.
+        try {
+          if (latlng && (latlng.lat !== initialCenter.lat || latlng.lng !== initialCenter.lng)) {
+            try { map.setView([latlng.lat, latlng.lng], 16); } catch {}
+            try { marker.setLatLng([latlng.lat, latlng.lng]); } catch {}
+          }
+        } catch {}
         mapInstanceRef.current = map;
         markerRef.current = marker;
         setStatus("روی نقشه محل را انتخاب کنید یا نشانگر را جابجا کنید");
