@@ -70,6 +70,9 @@ const AppContent: React.FC = () => {
       await requestOtp(details.phone);
       setPendingOrderDetails(details);
       setAuthPhoneNumber(details.phone);
+      try {
+        sessionStorage.setItem("kaj-auth-phone", details.phone);
+      } catch {}
       navigateTo("otp");
     } catch (error) {
       console.error("Failed to request OTP", error);
@@ -89,6 +92,9 @@ const AppContent: React.FC = () => {
       // If there was no pending order, just go home (e.g., a regular login)
       navigateTo("home");
     }
+    try {
+      sessionStorage.removeItem("kaj-auth-phone");
+    } catch {}
   };
 
   // Triggered for logged-in users from CheckoutPage, or for new users after OTP success
@@ -167,6 +173,9 @@ const AppContent: React.FC = () => {
     try {
       await requestOtp(phone);
       setAuthPhoneNumber(phone);
+      try {
+        sessionStorage.setItem("kaj-auth-phone", phone);
+      } catch {}
       navigateTo("otp");
     } catch (error) {
       console.error("Failed to request OTP", error);
@@ -211,14 +220,22 @@ const AppContent: React.FC = () => {
         ) : (
           <HomePage onNavigate={navigateTo} />
         );
-      case "otp":
+      case "otp": {
+        // Guard against direct navigation to /otp without a phone number.
+        const phone = authPhoneNumber || sessionStorage.getItem("kaj-auth-phone") || "";
+        if (!phone) {
+          // Redirect to login page to request phone
+          navigateTo("login");
+          return <HomePage onNavigate={navigateTo} />;
+        }
         return (
           <OtpPage
             onSuccess={handleOtpSuccess}
-            phoneNumber={authPhoneNumber}
+            phoneNumber={phone}
             onNavigate={navigateTo}
           />
         );
+      }
       default:
         return <HomePage onNavigate={navigateTo} />;
     }
