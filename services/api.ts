@@ -33,10 +33,15 @@ const apiRequest = async <T = any>(
 
   try {
     const response = await fetch(url, config);
+    const contentType = response.headers.get("content-type");
     if (!response.ok) {
+      // Try to parse server-provided JSON error
+      if (contentType && contentType.includes("application/json")) {
+        const json = await response.json();
+        return json as any;
+      }
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     }
-    const contentType = response.headers.get("content-type");
     if (contentType && contentType.includes("application/json")) {
       return await response.json();
     }
@@ -286,7 +291,9 @@ export const initiatePayment = async (orderData: {
     });
 
     if (!orderResponse?.id) {
-      return { success: false, message: "خطا در ایجاد سفارش" };
+      // If server returned an error object, use its message if available
+      const serverError = (orderResponse as any)?.error;
+      return { success: false, message: serverError || "خطا در ایجاد سفارش" };
     }
 
     const orderId = orderResponse.id;
