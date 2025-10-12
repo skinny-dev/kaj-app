@@ -428,7 +428,10 @@ export const updateUserProfile = async (
     const errMsg = (data as any).error;
     // If the error indicates auth problems, clear local auth token so client can re-login
     try {
-      if (typeof errMsg === "string" && /invalid|expired|unauthor/i.test(errMsg)) {
+      if (
+        typeof errMsg === "string" &&
+        /invalid|expired|unauthor/i.test(errMsg)
+      ) {
         setAuthToken(null);
       }
     } catch {}

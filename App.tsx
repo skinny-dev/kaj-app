@@ -147,7 +147,10 @@ const AppContent: React.FC = () => {
         items: details.items.map((item) => {
           const addonsList = (item.selectedAddons || [])
             .filter((a) => a.quantity > 0)
-            .map((a) => ({ addonId: a.addonId.toString(), quantity: a.quantity }));
+            .map((a) => ({
+              addonId: a.addonId.toString(),
+              quantity: a.quantity,
+            }));
           return {
             menuItemId: item.id.toString(),
             quantity: item.quantity,

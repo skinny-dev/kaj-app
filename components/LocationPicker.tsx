@@ -508,16 +508,29 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
     // Helper to try applying any pending position to map+marker
     const applyPendingIfReady = (next: LatLng) => {
       try {
-        if (mapInstanceRef.current)
-          mapInstanceRef.current.setView([next.lat, next.lng], 16);
-        if (markerRef.current)
-          markerRef.current.setLatLng([next.lat, next.lng]);
+        if (!mapInstanceRef.current || !markerRef.current) {
+          return false;
+        }
+
+        // First set the marker position
+        markerRef.current.setLatLng([next.lat, next.lng]);
+
+        // Then animate the map to that position
+        mapInstanceRef.current.setView([next.lat, next.lng], 16, {
+          animate: true,
+          duration: 1
+        });
+
+        // Update state and trigger onChange
+        setLatlng(next);
         if (typeof onChange === "function") onChange(next);
-        // clear pending once applied
+
+        // Clear pending once applied
         pendingPositionRef.current = null;
         setStatus("موقعیت شما روی نقشه نمایش داده شد");
         return true;
-      } catch {
+      } catch (err) {
+        console.error("Error applying location:", err);
         return false;
       }
     };
@@ -525,30 +538,46 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
     // Try to get current position from browser and apply it (store as pending if map isn't ready yet)
     navigator.geolocation.getCurrentPosition(
       (pos) => {
-        const glat = pos.coords.latitude;
-        const glng = pos.coords.longitude;
-        const next = { lat: glat, lng: glng };
-        // store as pending and update state
-        pendingPositionRef.current = next;
-        setLatlng(next);
+        try {
+          const glat = pos.coords.latitude;
+          const glng = pos.coords.longitude;
+          const next = { lat: glat, lng: glng };
+          
+          console.log("Got position:", next);
 
-        // Try immediate apply; if map/marker not ready we'll rely on init/effect to pick it up
-        const applied = applyPendingIfReady(next);
-
-        // If not applied immediately, schedule a few retries in case map finishes shortly
-        if (!applied) {
-          const attempts = [150, 500, 1200];
-          attempts.forEach((delay) =>
-            setTimeout(() => {
-              try {
-                const p = pendingPositionRef.current;
-                if (p) applyPendingIfReady(p);
-              } catch {}
-            }, delay)
-          );
+          // Ensure the map is ready
+          if (!mapInstanceRef.current || !markerRef.current) {
+            console.log("Map or marker not ready, storing as pending");
+            pendingPositionRef.current = next;
+            setLatlng(next);
+            
+            // Try to apply with increasing delays
+            const attempts = [100, 300, 800, 1500];
+            attempts.forEach((delay) =>
+              setTimeout(() => {
+                try {
+                  if (pendingPositionRef.current) {
+                    console.log("Retry applying position after", delay, "ms");
+                    if (applyPendingIfReady(pendingPositionRef.current)) {
+                      console.log("Successfully applied position on retry");
+                    }
+                  }
+                } catch (err) {
+                  console.error("Error in retry:", err);
+                }
+              }, delay)
+            );
+          } else {
+            // Map is ready, apply immediately
+            console.log("Map ready, applying position immediately");
+            applyPendingIfReady(next);
+          }
+        } catch (err) {
+          console.error("Error processing position:", err);
+          setLocationError("خطا در پردازش موقعیت. لطفا دوباره تلاش کنید.");
+        } finally {
+          setLocationLoading(false);
         }
-
-        setLocationLoading(false);
       },
       (error) => {
         setLocationLoading(false);
