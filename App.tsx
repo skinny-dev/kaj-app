@@ -123,7 +123,11 @@ const AppContent: React.FC = () => {
 
     try {
       // If the address is new, add it to the user's profile
-      if (currentUser && !currentUser.addresses.includes(details.address)) {
+      if (
+        currentUser &&
+        Array.isArray(currentUser.addresses) &&
+        !currentUser.addresses.includes(details.address)
+      ) {
         await addAddress(details.address);
       }
 
