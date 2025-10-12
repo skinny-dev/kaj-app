@@ -176,7 +176,22 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({
     if (currentUser) {
       // Pre-fill with existing name if user has one, otherwise leave empty
       setName(currentUser.name || "");
-      setPhone(currentUser.phone);
+      // Normalize phone: ensure string, convert Persian digits and add leading 0 if missing
+      try {
+        const raw = currentUser.phone || "";
+        const asStr = String(raw);
+        const pers = asStr.replace(/[۰۱۲۳۴۵۶۷۸۹]/g, (m) =>
+          String("۰۱۲۳۴۵۶۷۸۹".indexOf(m))
+        );
+        const digitsOnly = pers.replace(/\D/g, "");
+        if (digitsOnly.length === 10 && digitsOnly.startsWith("9")) {
+          setPhone("0" + digitsOnly);
+        } else {
+          setPhone(asStr);
+        }
+      } catch {
+        setPhone(currentUser.phone as any);
+      }
       if (
         Array.isArray((currentUser as any).addressItems) &&
         (currentUser as any).addressItems.length > 0
