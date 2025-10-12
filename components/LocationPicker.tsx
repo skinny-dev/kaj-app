@@ -12,7 +12,11 @@ export interface LocationPickerProps {
   initialCenter?: LatLng;
   onConfirm: (data: { lat: number; lng: number; address: string }) => void;
   onCancel?: () => void;
-  formatAddress?: (raw: { lat: number; lng: number; neshan?: string }) => string;
+  formatAddress?: (raw: {
+    lat: number;
+    lng: number;
+    neshan?: string;
+  }) => string;
   value?: LatLng; // controlled position
   onChange?: (pos: LatLng) => void; // notify on marker change
   hideHeader?: boolean;
@@ -75,7 +79,7 @@ const loadStyle = (href: string, timeoutMs = 5000) =>
 // Try to init Neshan map first, fall back to OSM/Leaflet if needed
 async function ensureMapLibs() {
   const forceLocal = (import.meta as any)?.env?.VITE_MAP_FORCE_LOCAL;
-  if (forceLocal && `${forceLocal}`.toLowerCase() !== 'false') {
+  if (forceLocal && `${forceLocal}`.toLowerCase() !== "false") {
     try {
       const mod = await import("leaflet");
       (window as any).L = (mod as any)?.default || mod;
@@ -86,7 +90,9 @@ async function ensureMapLibs() {
   try {
     await loadStyle("https://static.neshan.org/sdk/leaflet/1.7.1/leaflet.css");
     await loadScript("https://static.neshan.org/sdk/leaflet/1.7.1/leaflet.js");
-    await loadScript("https://static.neshan.org/sdk/leaflet/1.7.1/neshan-leaflet.js");
+    await loadScript(
+      "https://static.neshan.org/sdk/leaflet/1.7.1/neshan-leaflet.js"
+    );
     if ((window as any).L) return { provider: "neshan" as const };
   } catch {}
 
@@ -99,8 +105,12 @@ async function ensureMapLibs() {
 
   // 3) Another CDN (jsDelivr)
   try {
-    await loadStyle("https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css");
-    await loadScript("https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js");
+    await loadStyle(
+      "https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"
+    );
+    await loadScript(
+      "https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"
+    );
     if ((window as any).L) return { provider: "osm" as const };
   } catch {}
 
@@ -133,21 +143,31 @@ async function reverseGeocodeOSM(lat: number, lng: number): Promise<string> {
   }
 }
 
-async function reverseGeocodeNeshan(lat: number, lng: number, apiKey?: string): Promise<string> {
+async function reverseGeocodeNeshan(
+  lat: number,
+  lng: number,
+  apiKey?: string
+): Promise<string> {
   // If no Neshan key, try OSM fallback first
   if (!apiKey) return reverseGeocodeOSM(lat, lng);
   try {
-    const res = await fetch(`https://api.neshan.org/v5/reverse?lat=${lat}&lng=${lng}`, {
-      headers: {
-        "Api-Key": apiKey,
-      },
-    });
+    const res = await fetch(
+      `https://api.neshan.org/v5/reverse?lat=${lat}&lng=${lng}`,
+      {
+        headers: {
+          "Api-Key": apiKey,
+        },
+      }
+    );
     if (!res.ok) throw new Error("reverse geocode http error");
     const data = await res.json();
     const address = (data.formatted_address || data.address || "").toString();
     return address || `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
   } catch (e) {
-    console.warn("[LocationPicker] Neshan reverse failed, falling back to OSM", e);
+    console.warn(
+      "[LocationPicker] Neshan reverse failed, falling back to OSM",
+      e
+    );
     return reverseGeocodeOSM(lat, lng);
   }
 }
@@ -196,16 +216,20 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
         setLoading(true);
         const { provider } = await ensureMapLibs();
         if (destroyed) return;
-        const disableNeshan = (import.meta as any)?.env?.VITE_MAP_DISABLE_NESHAN;
+        const disableNeshan = (import.meta as any)?.env
+          ?.VITE_MAP_DISABLE_NESHAN;
         const hasNeshanKey = Boolean(
           apiKey || (import.meta as any)?.env?.VITE_NESHAN_API_KEY
         );
-        const allowNeshan = provider === "neshan" && hasNeshanKey && !(disableNeshan && `${disableNeshan}`.toLowerCase() !== 'false');
+        const allowNeshan =
+          provider === "neshan" &&
+          hasNeshanKey &&
+          !(disableNeshan && `${disableNeshan}`.toLowerCase() !== "false");
         const effectiveProvider = allowNeshan ? "neshan" : "osm";
         setProvider(effectiveProvider as any);
         setInitError(null);
 
-  const L = (window as any).L || (await import("leaflet")).default;
+        const L = (window as any).L || (await import("leaflet")).default;
         if (!mapRef.current) return;
 
         if (effectiveProvider === "neshan") {
@@ -215,11 +239,16 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
             center: [initialCenter.lat, initialCenter.lng],
             zoom: 15,
           });
-          try { map && map.once && map.once('load', () => setLoading(false)); } catch {}
+          try {
+            map && map.once && map.once("load", () => setLoading(false));
+          } catch {}
           // Fallback: in case 'load' isn't emitted, clear loading after a short delay
           setTimeout(() => setLoading(false), 300);
         } else {
-          map = L.map(mapRef.current).setView([initialCenter.lat, initialCenter.lng], 15);
+          map = L.map(mapRef.current).setView(
+            [initialCenter.lat, initialCenter.lng],
+            15
+          );
           const tileSources = [
             "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
             "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
@@ -238,14 +267,16 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
             try {
               const tl = L.tileLayer(src, {
                 maxZoom: 19,
-                attribution: '&copy; OpenStreetMap contributors',
+                attribution: "&copy; OpenStreetMap contributors",
               });
               tileLayerRef.current = tl;
               tl.on("tileerror", () => {
                 // try next source once
                 const next = idx + 1;
                 if (tileLayerRef.current) {
-                  try { map.removeLayer(tileLayerRef.current); } catch {}
+                  try {
+                    map.removeLayer(tileLayerRef.current);
+                  } catch {}
                 }
                 addTileLayer(next);
               });
@@ -256,25 +287,41 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
             }
           };
           addTileLayer(0);
-          try { map && map.once && map.once('load', () => setLoading(false)); } catch {}
+          try {
+            map && map.once && map.once("load", () => setLoading(false));
+          } catch {}
         }
 
-        marker = L.marker([initialCenter.lat, initialCenter.lng], { draggable: !readOnly }).addTo(map);
+        marker = L.marker([initialCenter.lat, initialCenter.lng], {
+          draggable: !readOnly,
+        }).addTo(map);
         // If a geolocation result arrived before the map finished initializing,
         // apply it now. Otherwise, apply the current latlng state if it differs.
         try {
           const pending = pendingPositionRef.current;
           if (pending) {
-            try { map.setView([pending.lat, pending.lng], 16); } catch {}
-            try { marker.setLatLng([pending.lat, pending.lng]); } catch {}
+            try {
+              map.setView([pending.lat, pending.lng], 16);
+            } catch {}
+            try {
+              marker.setLatLng([pending.lat, pending.lng]);
+            } catch {}
             // notify parent and local state
             setLatlng(pending);
-            if (typeof onChange === 'function') onChange(pending);
+            if (typeof onChange === "function") onChange(pending);
             // clear pending once applied
             pendingPositionRef.current = null;
-          } else if (latlng && (latlng.lat !== initialCenter.lat || latlng.lng !== initialCenter.lng)) {
-            try { map.setView([latlng.lat, latlng.lng], 16); } catch {}
-            try { marker.setLatLng([latlng.lat, latlng.lng]); } catch {}
+          } else if (
+            latlng &&
+            (latlng.lat !== initialCenter.lat ||
+              latlng.lng !== initialCenter.lng)
+          ) {
+            try {
+              map.setView([latlng.lat, latlng.lng], 16);
+            } catch {}
+            try {
+              marker.setLatLng([latlng.lat, latlng.lng]);
+            } catch {}
           }
         } catch {}
         mapInstanceRef.current = map;
@@ -285,8 +332,16 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
         const scheduleInvalidate = (delays: number[]) => {
           delays.forEach((ms) => {
             setTimeout(() => {
-              try { map && map.invalidateSize && map.invalidateSize(); } catch {}
-              try { map && map.setView && map.setView([initialCenter.lat, initialCenter.lng], 15, { animate: false }); } catch {}
+              try {
+                map && map.invalidateSize && map.invalidateSize();
+              } catch {}
+              try {
+                map &&
+                  map.setView &&
+                  map.setView([initialCenter.lat, initialCenter.lng], 15, {
+                    animate: false,
+                  });
+              } catch {}
             }, ms);
           });
         };
@@ -294,19 +349,25 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
         scheduleInvalidate([16, 120, 300, 600, 1000]);
         try {
           requestAnimationFrame(() => {
-            try { map && map.invalidateSize && map.invalidateSize(); } catch {}
+            try {
+              map && map.invalidateSize && map.invalidateSize();
+            } catch {}
           });
         } catch {}
         onResize = () => {
-          try { map && map.invalidateSize && map.invalidateSize(); } catch {}
+          try {
+            map && map.invalidateSize && map.invalidateSize();
+          } catch {}
         };
         window.addEventListener("resize", onResize);
 
         // Observe size changes of the container to keep Leaflet layout correct
         try {
-          if (mapRef.current && 'ResizeObserver' in window) {
+          if (mapRef.current && "ResizeObserver" in window) {
             const ro = new ResizeObserver(() => {
-              try { map && map.invalidateSize && map.invalidateSize(); } catch {}
+              try {
+                map && map.invalidateSize && map.invalidateSize();
+              } catch {}
             });
             ro.observe(mapRef.current);
             resizeObserverRef.current = ro;
@@ -317,7 +378,7 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
           const next = { lat, lng };
           setLatlng(next);
           if (marker) marker.setLatLng([lat, lng]);
-          if (typeof onChange === 'function') onChange(next);
+          if (typeof onChange === "function") onChange(next);
         };
 
         if (!readOnly) {
@@ -356,7 +417,9 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
         }
       } catch (e) {
         console.error("[LocationPicker] Map init failed", e);
-        setStatus("خطا در بارگذاری نقشه. اتصال اینترنت یا فیلترشکن را بررسی کنید.");
+        setStatus(
+          "خطا در بارگذاری نقشه. اتصال اینترنت یا فیلترشکن را بررسی کنید."
+        );
         setInitError((e as Error)?.message || "init failed");
         setLoading(false);
       }
@@ -368,7 +431,9 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
         if (onResize) window.removeEventListener("resize", onResize);
         if (map && map.remove) map.remove();
         if (resizeObserverRef.current) {
-          try { resizeObserverRef.current.disconnect(); } catch {}
+          try {
+            resizeObserverRef.current.disconnect();
+          } catch {}
           resizeObserverRef.current = null;
         }
       } catch {}
@@ -379,8 +444,13 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
   useEffect(() => {
     try {
       if (mapInstanceRef.current && initialCenter) {
-        mapInstanceRef.current.setView([initialCenter.lat, initialCenter.lng], 15, { animate: false });
-        if (markerRef.current) markerRef.current.setLatLng([initialCenter.lat, initialCenter.lng]);
+        mapInstanceRef.current.setView(
+          [initialCenter.lat, initialCenter.lng],
+          15,
+          { animate: false }
+        );
+        if (markerRef.current)
+          markerRef.current.setLatLng([initialCenter.lat, initialCenter.lng]);
       }
     } catch {}
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -395,26 +465,37 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
   }, [value?.lat, value?.lng]);
 
   // If a pending geolocation result exists, try applying it once map/marker become available
-  useEffect(() => {
-    const tryApply = () => {
-      try {
-        const p = pendingPositionRef.current;
-        if (p && mapInstanceRef.current && markerRef.current) {
-          try { mapInstanceRef.current.setView([p.lat, p.lng], 16); } catch {}
-          try { markerRef.current.setLatLng([p.lat, p.lng]); } catch {}
-          setLatlng(p);
-          if (typeof onChange === 'function') onChange(p);
-          pendingPositionRef.current = null;
-          setStatus("موقعیت شما روی نقشه نمایش داده شد");
-        }
-      } catch {}
-    };
-    // Try immediately and also a few times in case map animation/delay still ongoing
-    tryApply();
-    const timers: number[] = [150, 400, 900].map((ms) => window.setTimeout(tryApply, ms));
-    return () => timers.forEach((t) => clearTimeout(t));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [/* intentionally empty; run on mount and retries only */]);
+  useEffect(
+    () => {
+      const tryApply = () => {
+        try {
+          const p = pendingPositionRef.current;
+          if (p && mapInstanceRef.current && markerRef.current) {
+            try {
+              mapInstanceRef.current.setView([p.lat, p.lng], 16);
+            } catch {}
+            try {
+              markerRef.current.setLatLng([p.lat, p.lng]);
+            } catch {}
+            setLatlng(p);
+            if (typeof onChange === "function") onChange(p);
+            pendingPositionRef.current = null;
+            setStatus("موقعیت شما روی نقشه نمایش داده شد");
+          }
+        } catch {}
+      };
+      // Try immediately and also a few times in case map animation/delay still ongoing
+      tryApply();
+      const timers: number[] = [150, 400, 900].map((ms) =>
+        window.setTimeout(tryApply, ms)
+      );
+      return () => timers.forEach((t) => clearTimeout(t));
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    },
+    [
+      /* intentionally empty; run on mount and retries only */
+    ]
+  );
 
   const handleUseMyLocation = () => {
     if (!navigator.geolocation) {
@@ -427,9 +508,11 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
     // Helper to try applying any pending position to map+marker
     const applyPendingIfReady = (next: LatLng) => {
       try {
-        if (mapInstanceRef.current) mapInstanceRef.current.setView([next.lat, next.lng], 16);
-        if (markerRef.current) markerRef.current.setLatLng([next.lat, next.lng]);
-        if (typeof onChange === 'function') onChange(next);
+        if (mapInstanceRef.current)
+          mapInstanceRef.current.setView([next.lat, next.lng], 16);
+        if (markerRef.current)
+          markerRef.current.setLatLng([next.lat, next.lng]);
+        if (typeof onChange === "function") onChange(next);
         // clear pending once applied
         pendingPositionRef.current = null;
         setStatus("موقعیت شما روی نقشه نمایش داده شد");
@@ -473,10 +556,12 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
 
         switch (error.code) {
           case error.PERMISSION_DENIED:
-            errorMessage = "دسترسی به موقعیت رد شد. لطفاً در تنظیمات مرورگر اجازه دهید.";
+            errorMessage =
+              "دسترسی به موقعیت رد شد. لطفاً در تنظیمات مرورگر اجازه دهید.";
             break;
           case error.POSITION_UNAVAILABLE:
-            errorMessage = "موقعیت شما در دسترس نیست. GPS یا اتصال اینترنت را بررسی کنید.";
+            errorMessage =
+              "موقعیت شما در دسترس نیست. GPS یا اتصال اینترنت را بررسی کنید.";
             break;
           case error.TIMEOUT:
             errorMessage = "زمان درخواست موقعیت تمام شد. دوباره تلاش کنید.";
@@ -497,7 +582,7 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
     setAddress(addrRaw);
     const finalAddress = formatAddress
       ? formatAddress({ lat: latlng.lat, lng: latlng.lng, neshan: addrRaw })
-      : (addrRaw || `${latlng.lat.toFixed(6)}, ${latlng.lng.toFixed(6)}`);
+      : addrRaw || `${latlng.lat.toFixed(6)}, ${latlng.lng.toFixed(6)}`;
     onConfirm({ lat: latlng.lat, lng: latlng.lng, address: finalAddress });
   };
 
@@ -525,7 +610,11 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
         <div
           ref={mapRef}
           style={{
-            height: fillParent ? "100%" : (typeof mapHeight === "number" ? mapHeight :  "55vh"),
+            height: fillParent
+              ? "100%"
+              : typeof mapHeight === "number"
+              ? mapHeight
+              : "55vh",
             minHeight: fillParent ? 0 : 320,
             width: "100%",
             borderRadius: 8,
@@ -540,19 +629,27 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
             <div className="w-4 h-4 rounded-full bg-white shadow-lg border-2 border-blue-500" />
           </div>
         )}
-        
 
         {loading && !initError && (
           <div className="absolute inset-0 z-[5] flex items-center justify-center bg-black/20">
-            <span className="text-xs text-gray-200">در حال بارگذاری نقشه...</span>
+            <span className="text-xs text-gray-200">
+              در حال بارگذاری نقشه...
+            </span>
           </div>
         )}
         {tileError && !loading && (
           <div className="absolute inset-0 z-[5] flex flex-col items-center justify-center gap-2 bg-black/30">
-            <p className="text-sm text-gray-200">عدم دسترسی به سرویس‌ نقشه. می‌توانید نقطه را بدون پس‌زمینه انتخاب کنید.</p>
+            <p className="text-sm text-gray-200">
+              عدم دسترسی به سرویس‌ نقشه. می‌توانید نقطه را بدون پس‌زمینه انتخاب
+              کنید.
+            </p>
             <button
               type="button"
-              onClick={() => { setTileError(false); setRetryKey((k) => k + 1); setLoading(true); }}
+              onClick={() => {
+                setTileError(false);
+                setRetryKey((k) => k + 1);
+                setLoading(true);
+              }}
               className="text-xs bg-gray-100 text-black rounded px-3 py-1"
             >
               تلاش مجدد
@@ -564,14 +661,18 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
             <p className="text-sm text-gray-200">بارگذاری نقشه ناموفق بود.</p>
             <button
               type="button"
-              onClick={() => { setLoading(true); setInitError(null); setRetryKey((k) => k + 1); }}
+              onClick={() => {
+                setLoading(true);
+                setInitError(null);
+                setRetryKey((k) => k + 1);
+              }}
               className="text-xs bg-gray-100 text-black rounded px-3 py-1"
             >
               تلاش مجدد
             </button>
           </div>
         )}
-        
+
         {/* Location error notification */}
         {locationError && (
           <div className="absolute top-4 left-4 right-4 z-[1002]">
@@ -582,8 +683,12 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
                 onClick={() => setLocationError(null)}
                 className="ml-2 text-white hover:text-gray-200"
               >
-                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+                <svg
+                  className="w-4 h-4"
+                  fill="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
                 </svg>
               </button>
             </div>
@@ -605,13 +710,13 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
             </>
           ) : (
             <>
-              <svg 
-                className="w-4 h-4 text-white" 
-                fill="currentColor" 
+              <svg
+                className="w-4 h-4 text-white"
+                fill="currentColor"
                 viewBox="0 0 24 24"
                 xmlns="http://www.w3.org/2000/svg"
               >
-                <path d="M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm8.94 3A8.994 8.994 0 0 0 13 3.06V1h-2v2.06A8.994 8.994 0 0 0 3.06 11H1v2h2.06A8.994 8.994 0 0 0 11 20.94V23h2v-2.06A8.994 8.994 0 0 0 20.94 13H23v-2h-2.06zM12 19c-3.87 0-7-3.13-7-7s3.13-7 7-7 7 3.13 7 7-3.13 7-7 7z"/>
+                <path d="M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm8.94 3A8.994 8.994 0 0 0 13 3.06V1h-2v2.06A8.994 8.994 0 0 0 3.06 11H1v2h2.06A8.994 8.994 0 0 0 11 20.94V23h2v-2.06A8.994 8.994 0 0 0 20.94 13H23v-2h-2.06zM12 19c-3.87 0-7-3.13-7-7s3.13-7 7-7 7 3.13 7 7-3.13 7-7 7z" />
               </svg>
               <span className="text-sm font-medium">موقعیت من</span>
             </>
@@ -639,9 +744,7 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
           </button>
         </div>
       )}
-      {address && (
-        <p className="text-xs text-gray-400">{address}</p>
-      )}
+      {address && <p className="text-xs text-gray-400">{address}</p>}
     </div>
   );
 };

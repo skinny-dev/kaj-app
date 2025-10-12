@@ -184,7 +184,10 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({
         const first = (currentUser as any).addressItems[0];
         setSelectedAddressId(first.id);
         setSelectedAddress(first.formatted);
-  } else if (Array.isArray(currentUser.addresses) && currentUser.addresses.length > 0) {
+      } else if (
+        Array.isArray(currentUser.addresses) &&
+        currentUser.addresses.length > 0
+      ) {
         setSelectedAddressId("");
         setSelectedAddress(stringifyAddress(currentUser.addresses[0] as any));
       } else {
@@ -548,7 +551,9 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({
               </div>
             )}
 
-            {currentUser && Array.isArray(currentUser.addresses) && currentUser.addresses.length > 0 ? (
+            {currentUser &&
+            Array.isArray(currentUser.addresses) &&
+            currentUser.addresses.length > 0 ? (
               <button
                 type="button"
                 onClick={() => setShowAddressModal(true)}
