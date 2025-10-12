@@ -12,6 +12,7 @@ import type { OrderDetails, CartItem } from "./types";
 import * as api from "./services/api";
 
 import { LoginPage } from "./pages/LoginPage";
+import ErrorBoundary from "./components/ErrorBoundary";
 
 export type Page =
   | "home"
@@ -64,6 +65,18 @@ const AppContent: React.FC = () => {
   }, [navigateTo]);
 
   // Remove the old navigateTo function since we're using router now
+
+  // Expose a global helper so external listeners can show runtime errors in the same toast
+  useEffect(() => {
+    try {
+      (window as any).__showAppError = (msg: string) => setCheckoutError(msg);
+    } catch {}
+    return () => {
+      try {
+        delete (window as any).__showAppError;
+      } catch {}
+    };
+  }, []);
 
   // Triggered from CheckoutPage for guest users
   const handleGuestCheckoutTrigger = async (details: PendingOrder) => {
@@ -227,7 +240,8 @@ const AppContent: React.FC = () => {
         );
       case "otp": {
         // Guard against direct navigation to /otp without a phone number.
-        const phone = authPhoneNumber || sessionStorage.getItem("kaj-auth-phone") || "";
+        const phone =
+          authPhoneNumber || sessionStorage.getItem("kaj-auth-phone") || "";
         if (!phone) {
           // Redirect to login page to request phone
           navigateTo("login");
@@ -254,7 +268,9 @@ const AppContent: React.FC = () => {
       {checkoutError && (
         <div className="fixed left-1/2 -translate-x-1/2 bottom-6 z-50 max-w-lg w-[90%]">
           <div className="bg-red-600 text-white px-4 py-3 rounded-lg shadow-lg flex items-start gap-3">
-            <div className="flex-1 text-sm leading-relaxed">{checkoutError}</div>
+            <div className="flex-1 text-sm leading-relaxed">
+              {checkoutError}
+            </div>
             <button
               onClick={() => setCheckoutError(null)}
               aria-label="بستن"
@@ -269,12 +285,60 @@ const AppContent: React.FC = () => {
   );
 };
 
+// Small component that registers global handlers and forwards runtime
+// errors to the in-app error display (window.__showAppError is set
+// by AppContent).
+const GlobalErrorHandler: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
+  useEffect(() => {
+    const show = (msg?: string) => {
+      try {
+        const fn = (window as any).__showAppError;
+        if (typeof fn === "function") fn(msg || "متاسفانه خطایی پیش آمد.");
+      } catch {}
+    };
+
+    const onError = (ev: any) => {
+      try {
+        console.error("Global error:", ev.error || ev.message, ev);
+        const m = ev?.error?.message || ev?.message || String(ev?.error || ev);
+        show(m);
+      } catch {}
+    };
+
+    const onRejection = (ev: any) => {
+      try {
+        console.error("Unhandled rejection:", ev.reason);
+        const m = ev?.reason?.message || String(ev?.reason);
+        show(m);
+      } catch {}
+    };
+
+    window.addEventListener("error", onError as EventListener);
+    window.addEventListener("unhandledrejection", onRejection as EventListener);
+    return () => {
+      window.removeEventListener("error", onError as EventListener);
+      window.removeEventListener(
+        "unhandledrejection",
+        onRejection as EventListener
+      );
+    };
+  }, []);
+
+  return <>{children}</>;
+};
+
 // Wrap main app and export
 const AppWrapper: React.FC = () => (
   <AuthProvider>
     <CartProvider>
       <RouterProvider>
-        <AppContent />
+        <ErrorBoundary>
+          <GlobalErrorHandler>
+            <AppContent />
+          </GlobalErrorHandler>
+        </ErrorBoundary>
       </RouterProvider>
     </CartProvider>
   </AuthProvider>

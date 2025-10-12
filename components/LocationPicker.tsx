@@ -169,6 +169,9 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
   const mapRef = useRef<HTMLDivElement | null>(null);
   const mapInstanceRef = useRef<any>(null);
   const markerRef = useRef<any>(null);
+  // If geolocation result arrives before map init, hold it here and apply once
+  // the map and marker have been created.
+  const pendingPositionRef = useRef<LatLng | null>(null);
   const tileLayerRef = useRef<any>(null);
   const resizeObserverRef = useRef<ResizeObserver | null>(null);
   const [status, setStatus] = useState<string>("در حال بارگذاری نقشه...");
@@ -257,10 +260,19 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
         }
 
         marker = L.marker([initialCenter.lat, initialCenter.lng], { draggable: !readOnly }).addTo(map);
-        // If user requested geolocation before map finished initializing,
-        // apply the latest latlng state to the newly created map & marker.
+        // If a geolocation result arrived before the map finished initializing,
+        // apply it now. Otherwise, apply the current latlng state if it differs.
         try {
-          if (latlng && (latlng.lat !== initialCenter.lat || latlng.lng !== initialCenter.lng)) {
+          const pending = pendingPositionRef.current;
+          if (pending) {
+            try { map.setView([pending.lat, pending.lng], 16); } catch {}
+            try { marker.setLatLng([pending.lat, pending.lng]); } catch {}
+            // notify parent and local state
+            setLatlng(pending);
+            if (typeof onChange === 'function') onChange(pending);
+            // clear pending once applied
+            pendingPositionRef.current = null;
+          } else if (latlng && (latlng.lat !== initialCenter.lat || latlng.lng !== initialCenter.lng)) {
             try { map.setView([latlng.lat, latlng.lng], 16); } catch {}
             try { marker.setLatLng([latlng.lat, latlng.lng]); } catch {}
           }
@@ -395,11 +407,16 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
       (pos) => {
         const glat = pos.coords.latitude;
         const glng = pos.coords.longitude;
-        setLatlng({ lat: glat, lng: glng });
+        const next = { lat: glat, lng: glng };
+        // store as pending and attempt immediate apply if map exists
+        pendingPositionRef.current = next;
+        setLatlng(next);
         try {
           if (mapInstanceRef.current) mapInstanceRef.current.setView([glat, glng], 16);
           if (markerRef.current) markerRef.current.setLatLng([glat, glng]);
-          if (typeof onChange === 'function') onChange({ lat: glat, lng: glng });
+          if (typeof onChange === 'function') onChange(next);
+          // if we applied immediately, clear pending
+          if (mapInstanceRef.current && markerRef.current) pendingPositionRef.current = null;
         } catch {}
         setLocationLoading(false);
         setStatus("موقعیت شما روی نقشه نمایش داده شد");
