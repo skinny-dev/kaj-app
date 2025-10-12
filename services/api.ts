@@ -423,6 +423,17 @@ export const updateUserProfile = async (
     body: JSON.stringify(profileData),
   });
   if (!data) return null;
+  // If server returned an explicit error payload, throw to let callers handle it
+  if ((data as any).error) {
+    const errMsg = (data as any).error;
+    // If the error indicates auth problems, clear local auth token so client can re-login
+    try {
+      if (typeof errMsg === "string" && /invalid|expired|unauthor/i.test(errMsg)) {
+        setAuthToken(null);
+      }
+    } catch {}
+    throw new Error(errMsg || "Server returned an error");
+  }
   // Support both { user } wrapper and direct user object
   if (data.user) return data.user as User;
   if (data.id && data.phone) {

@@ -134,6 +134,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const updateName = async (name: string) => {
     if (currentUser) {
       const updatedUser = await api.updateUserName(name);
+      if (!updatedUser) throw new Error("Failed to update user");
       setCurrentUser(updatedUser);
     }
   };
