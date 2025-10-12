@@ -37,6 +37,7 @@ const AppContent: React.FC = () => {
   const [pendingOrderDetails, setPendingOrderDetails] =
     useState<PendingOrder | null>(null);
   const [authPhoneNumber, setAuthPhoneNumber] = useState<string>("");
+  const [checkoutError, setCheckoutError] = useState<string | null>(null);
 
   const {
     currentUser,
@@ -162,8 +163,12 @@ const AppContent: React.FC = () => {
       }
     } catch (error) {
       console.error("Failed to create order or initiate payment", error);
-      alert(
-        "متاسفانه در ثبت سفارش یا پرداخت شما مشکلی پیش آمد. لطفا دوباره تلاش کنید."
+      // Show server-provided message when available
+      const msg = error instanceof Error ? error.message : String(error || "");
+      setCheckoutError(
+        msg && !msg.includes("Payment request failed")
+          ? msg
+          : "متاسفانه در ثبت سفارش یا پرداخت شما مشکلی پیش آمد. لطفا دوباره تلاش کنید."
       );
     }
   };
@@ -241,19 +246,38 @@ const AppContent: React.FC = () => {
     }
   };
 
-  return <div className="min-h-screen bg-black">{renderPage()}</div>;
-};
-
-const App: React.FC = () => {
   return (
-    <AuthProvider>
-      <CartProvider>
-        <RouterProvider>
-          <AppContent />
-        </RouterProvider>
-      </CartProvider>
-    </AuthProvider>
+    <div className="min-h-screen bg-black">
+      {renderPage()}
+
+      {/* Checkout error toast */}
+      {checkoutError && (
+        <div className="fixed left-1/2 -translate-x-1/2 bottom-6 z-50 max-w-lg w-[90%]">
+          <div className="bg-red-600 text-white px-4 py-3 rounded-lg shadow-lg flex items-start gap-3">
+            <div className="flex-1 text-sm leading-relaxed">{checkoutError}</div>
+            <button
+              onClick={() => setCheckoutError(null)}
+              aria-label="بستن"
+              className="text-white/80 hover:text-white"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
   );
 };
 
-export default App;
+// Wrap main app and export
+const AppWrapper: React.FC = () => (
+  <AuthProvider>
+    <CartProvider>
+      <RouterProvider>
+        <AppContent />
+      </RouterProvider>
+    </CartProvider>
+  </AuthProvider>
+);
+
+export default AppWrapper;
