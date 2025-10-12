@@ -144,17 +144,17 @@ const AppContent: React.FC = () => {
 
       // Create order and request payment in one step
       const paymentData = {
-        items: details.items.map((item) => {
-          const addonsList = (item.selectedAddons || [])
+        items: details.items.map((item) => ({
+          menuItemId: item.id.toString(),
+          quantity: item.quantity,
+          price: item.price, // base product unit price (addons priced server-side using addons[])
+          addons: (item.selectedAddons || [])
             .filter((a) => a.quantity > 0)
-            .map((a) => ({ addonId: a.addonId.toString(), quantity: a.quantity }));
-          return {
-            menuItemId: item.id.toString(),
-            quantity: item.quantity,
-            price: item.price, // base product unit price (addons priced server-side using addons[])
-            ...(addonsList.length ? { addons: addonsList } : {}),
-          };
-        }),
+            .map((a) => ({
+              addonId: a.addonId.toString(),
+              quantity: a.quantity,
+            })),
+        })),
         deliveryAddress: details.address,
         phone: details.phone,
         totalAmount: total,
