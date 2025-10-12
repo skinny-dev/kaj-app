@@ -184,7 +184,7 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({
         const first = (currentUser as any).addressItems[0];
         setSelectedAddressId(first.id);
         setSelectedAddress(first.formatted);
-      } else if (currentUser.addresses.length > 0) {
+  } else if (Array.isArray(currentUser.addresses) && currentUser.addresses.length > 0) {
         setSelectedAddressId("");
         setSelectedAddress(stringifyAddress(currentUser.addresses[0] as any));
       } else {
@@ -447,6 +447,7 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({
             {currentUser &&
               (!Array.isArray((currentUser as any).addressItems) ||
                 (currentUser as any).addressItems.length === 0) &&
+              Array.isArray(currentUser.addresses) &&
               currentUser.addresses.length > 0 && (
                 <div className="space-y-3 mb-4">
                   {currentUser.addresses.map((address, index) => {
