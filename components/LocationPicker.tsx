@@ -394,37 +394,83 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
     // We don't keep a persistent map instance here; position sync is handled during init
   }, [value?.lat, value?.lng]);
 
+  // If a pending geolocation result exists, try applying it once map/marker become available
+  useEffect(() => {
+    const tryApply = () => {
+      try {
+        const p = pendingPositionRef.current;
+        if (p && mapInstanceRef.current && markerRef.current) {
+          try { mapInstanceRef.current.setView([p.lat, p.lng], 16); } catch {}
+          try { markerRef.current.setLatLng([p.lat, p.lng]); } catch {}
+          setLatlng(p);
+          if (typeof onChange === 'function') onChange(p);
+          pendingPositionRef.current = null;
+          setStatus("موقعیت شما روی نقشه نمایش داده شد");
+        }
+      } catch {}
+    };
+    // Try immediately and also a few times in case map animation/delay still ongoing
+    tryApply();
+    const timers: number[] = [150, 400, 900].map((ms) => window.setTimeout(tryApply, ms));
+    return () => timers.forEach((t) => clearTimeout(t));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [/* intentionally empty; run on mount and retries only */]);
+
   const handleUseMyLocation = () => {
     if (!navigator.geolocation) {
       setLocationError("مرورگر شما از خدمات موقعیت‌یابی پشتیبانی نمی‌کند.");
       return;
     }
-    
     setLocationLoading(true);
     setLocationError(null);
-    
+
+    // Helper to try applying any pending position to map+marker
+    const applyPendingIfReady = (next: LatLng) => {
+      try {
+        if (mapInstanceRef.current) mapInstanceRef.current.setView([next.lat, next.lng], 16);
+        if (markerRef.current) markerRef.current.setLatLng([next.lat, next.lng]);
+        if (typeof onChange === 'function') onChange(next);
+        // clear pending once applied
+        pendingPositionRef.current = null;
+        setStatus("موقعیت شما روی نقشه نمایش داده شد");
+        return true;
+      } catch {
+        return false;
+      }
+    };
+
+    // Try to get current position from browser and apply it (store as pending if map isn't ready yet)
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         const glat = pos.coords.latitude;
         const glng = pos.coords.longitude;
         const next = { lat: glat, lng: glng };
-        // store as pending and attempt immediate apply if map exists
+        // store as pending and update state
         pendingPositionRef.current = next;
         setLatlng(next);
-        try {
-          if (mapInstanceRef.current) mapInstanceRef.current.setView([glat, glng], 16);
-          if (markerRef.current) markerRef.current.setLatLng([glat, glng]);
-          if (typeof onChange === 'function') onChange(next);
-          // if we applied immediately, clear pending
-          if (mapInstanceRef.current && markerRef.current) pendingPositionRef.current = null;
-        } catch {}
+
+        // Try immediate apply; if map/marker not ready we'll rely on init/effect to pick it up
+        const applied = applyPendingIfReady(next);
+
+        // If not applied immediately, schedule a few retries in case map finishes shortly
+        if (!applied) {
+          const attempts = [150, 500, 1200];
+          attempts.forEach((delay) =>
+            setTimeout(() => {
+              try {
+                const p = pendingPositionRef.current;
+                if (p) applyPendingIfReady(p);
+              } catch {}
+            }, delay)
+          );
+        }
+
         setLocationLoading(false);
-        setStatus("موقعیت شما روی نقشه نمایش داده شد");
       },
       (error) => {
         setLocationLoading(false);
         let errorMessage = "دسترسی به موقعیت شما امکان‌پذیر نشد.";
-        
+
         switch (error.code) {
           case error.PERMISSION_DENIED:
             errorMessage = "دسترسی به موقعیت رد شد. لطفاً در تنظیمات مرورگر اجازه دهید.";
@@ -436,7 +482,7 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
             errorMessage = "زمان درخواست موقعیت تمام شد. دوباره تلاش کنید.";
             break;
         }
-        
+
         setLocationError(errorMessage);
       },
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 300000 }
