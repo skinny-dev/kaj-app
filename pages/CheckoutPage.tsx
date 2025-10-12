@@ -547,7 +547,7 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({
               </div>
             )}
 
-            {currentUser && currentUser.addresses.length > 0 ? (
+            {currentUser && Array.isArray(currentUser.addresses) && currentUser.addresses.length > 0 ? (
               <button
                 type="button"
                 onClick={() => setShowAddressModal(true)}
