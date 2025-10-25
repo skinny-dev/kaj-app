@@ -171,6 +171,28 @@ async function reverseGeocodeNeshan(
     return reverseGeocodeOSM(lat, lng);
   }
 }
+async function forwardGeocodeOSM(query: string): Promise<LatLng | null> {
+  try {
+    const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&accept-language=fa&q=${encodeURIComponent(
+      query
+    )}`;
+    const res = await fetch(url, {
+      headers: { "Accept-Language": "fa,fa-IR;q=0.9,en;q=0.8" },
+    });
+    if (!res.ok) throw new Error("osm search http error");
+    const data = await res.json();
+    if (Array.isArray(data) && data.length) {
+      const { lat, lon } = data[0] || {};
+      const la = parseFloat(lat);
+      const lo = parseFloat(lon);
+      if (!isNaN(la) && !isNaN(lo)) return { lat: la, lng: lo };
+    }
+  } catch (e) {
+    console.warn("[LocationPicker] OSM forward search failed", e);
+  }
+  return null;
+}
+
 
 // Check whether geolocation is likely allowed in this document
 async function canUseGeolocation(): Promise<{ ok: boolean; reason?: string }> {
@@ -247,6 +269,9 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
   const [tileError, setTileError] = useState<boolean>(false);
   const [locationLoading, setLocationLoading] = useState<boolean>(false);
   const [locationError, setLocationError] = useState<string | null>(null);
+  const [geoPolicyReason, setGeoPolicyReason] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState<string>("");
+  const [searchLoading, setSearchLoading] = useState<boolean>(false);
 
   useEffect(() => {
     let map: any;
@@ -469,6 +494,7 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
                   ? 'برای استفاده از موقعیت، از اتصال امن (HTTPS) استفاده کنید.'
                   : 'امکان دسترسی به موقعیت فراهم نیست.'
               );
+              setGeoPolicyReason(probe.reason || 'blocked');
             }
           } catch {}
         }
@@ -565,6 +591,7 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
             ? 'برای دسترسی به موقعیت باید از HTTPS یا localhost استفاده کنید.'
             : 'مرورگر شما از خدمات موقعیت‌یابی پشتیبانی نمی‌کند.'
         );
+        setGeoPolicyReason(probe.reason || 'blocked');
         return;
       }
     })();
@@ -669,6 +696,73 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
     );
   };
 
+  const openInNewTabForGeo = () => {
+    try {
+      const u = new URL(window.location.href);
+      u.hash = '#geo=1';
+      window.open(u.toString(), '_blank', 'noopener');
+    } catch {}
+  };
+
+  // If opened with #geo=1 and geolocation allowed, auto-try once
+  useEffect(() => {
+    (async () => {
+      if (typeof window === 'undefined') return;
+      if (window.location.hash !== '#geo=1') return;
+      const probe = await canUseGeolocation();
+      if (!probe.ok || !navigator.geolocation) return;
+      try {
+        setLocationLoading(true);
+        navigator.geolocation.getCurrentPosition(
+          (pos) => {
+            const next = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+            pendingPositionRef.current = next;
+            // Try apply immediately if map ready
+            try {
+              if (mapInstanceRef.current && markerRef.current) {
+                markerRef.current.setLatLng([next.lat, next.lng]);
+                mapInstanceRef.current.setView([next.lat, next.lng], 16, { animate: true });
+                setLatlng(next);
+                if (typeof onChange === 'function') onChange(next);
+                pendingPositionRef.current = null;
+              }
+            } catch {}
+          },
+          () => {},
+          { enableHighAccuracy: true, timeout: 10000, maximumAge: 300000 }
+        );
+      } finally {
+        setLocationLoading(false);
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleSearch = async () => {
+    const q = searchQuery.trim();
+    if (!q) return;
+    setSearchLoading(true);
+    try {
+      const pos = await forwardGeocodeOSM(q);
+      if (pos) {
+        // Center and drop marker
+        try {
+          if (mapInstanceRef.current && markerRef.current) {
+            markerRef.current.setLatLng([pos.lat, pos.lng]);
+            mapInstanceRef.current.setView([pos.lat, pos.lng], 16, { animate: true });
+          }
+        } catch {}
+        setLatlng(pos);
+        if (typeof onChange === 'function') onChange(pos);
+        setStatus('موقعیت بر اساس جستجو تنظیم شد');
+      } else {
+        setLocationError('آدرس مورد نظر یافت نشد. لطفاً دقیق‌تر جستجو کنید.');
+      }
+    } finally {
+      setSearchLoading(false);
+    }
+  };
+
   const handleConfirm = async () => {
     const key = apiKey || (import.meta as any)?.env?.VITE_NESHAN_API_KEY;
     const addrRaw = key
@@ -695,6 +789,39 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
             className="text-xs bg-gray-800 border border-gray-600 rounded px-2 py-1 hover:border-gray-400"
           >
             موقعیت من
+          </button>
+        </div>
+      )}
+      {/* Permissions-Policy fallback CTA */}
+      {geoPolicyReason && !hideHeader && (
+        <div className="text-xs text-amber-300 bg-amber-900/30 border border-amber-700 rounded p-2">
+          دسترسی به موقعیت در این صفحه محدود شده است. می‌توانید اپ را در زبانه جدید باز کنید تا اجازه موقعیت داده شود.
+          <button
+            type="button"
+            onClick={openInNewTabForGeo}
+            className="ml-2 inline-block px-2 py-1 bg-amber-700 hover:bg-amber-600 rounded text-white"
+          >
+            باز کردن در صفحه جدید
+          </button>
+        </div>
+      )}
+      {/* Forward geocoding search */}
+      {!hideHeader && (
+        <div className="flex items-center gap-2 text-xs">
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="جستجوی آدرس (مثلاً: تهران، ولیعصر ۱۲۳)"
+            className="flex-1 bg-gray-800 text-gray-100 border border-gray-600 rounded px-2 py-1"
+          />
+          <button
+            type="button"
+            disabled={searchLoading}
+            onClick={handleSearch}
+            className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded border border-gray-500"
+          >
+            {searchLoading ? 'در حال جستجو…' : 'جستجو'}
           </button>
         </div>
       )}
