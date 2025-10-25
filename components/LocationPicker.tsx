@@ -193,6 +193,48 @@ async function forwardGeocodeOSM(query: string): Promise<LatLng | null> {
   return null;
 }
 
+// Approximate geolocation via IP-based services (city-level)
+async function ipApproximateLocation(): Promise<LatLng | null> {
+  // Try a few public endpoints in order
+  const candidates = [
+    async () => {
+      const r = await fetch("https://ipapi.co/json");
+      if (!r.ok) throw new Error("ipapi http");
+      const j: any = await r.json();
+      if (j && typeof j.latitude === "number" && typeof j.longitude === "number")
+        return { lat: j.latitude, lng: j.longitude } as LatLng;
+      if (typeof j.lat === "number" && typeof j.lon === "number")
+        return { lat: j.lat, lng: j.lon } as LatLng;
+      return null;
+    },
+    async () => {
+      const r = await fetch("https://ipwho.is/");
+      if (!r.ok) throw new Error("ipwho http");
+      const j: any = await r.json();
+      if (j && j.success && typeof j.latitude === "number" && typeof j.longitude === "number")
+        return { lat: j.latitude, lng: j.longitude } as LatLng;
+      return null;
+    },
+    async () => {
+      const r = await fetch("https://ipapi.co/latlong/");
+      if (!r.ok) throw new Error("ipapi latlong http");
+      const t = (await r.text()).trim();
+      const parts = t.split(",");
+      const la = parseFloat(parts[0]);
+      const lo = parseFloat(parts[1]);
+      if (!isNaN(la) && !isNaN(lo)) return { lat: la, lng: lo } as LatLng;
+      return null;
+    },
+  ];
+  for (const fn of candidates) {
+    try {
+      const p = await fn();
+      if (p) return p;
+    } catch {}
+  }
+  return null;
+}
+
 
 // Check whether geolocation is likely allowed in this document
 async function canUseGeolocation(): Promise<{ ok: boolean; reason?: string }> {
@@ -500,6 +542,15 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
                   : 'امکان دسترسی به موقعیت فراهم نیست.'
               );
               setGeoPolicyReason(probe.reason || 'blocked');
+              // As a best-effort fallback, try approximate location via IP and center the map
+              try {
+                const approx = await ipApproximateLocation();
+                if (approx) {
+                  if (map && map.setView) map.setView([approx.lat, approx.lng], 13);
+                  updatePosition(approx.lat, approx.lng);
+                  setStatus('موقعیت تقریبی بر اساس IP تنظیم شد — لطفاً روی نقشه دقیق کنید.');
+                }
+              } catch {}
             }
           } catch {}
         }
@@ -596,6 +647,19 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
           : 'مرورگر شما از خدمات موقعیت‌یابی پشتیبانی نمی‌کند.'
       );
       setGeoPolicyReason(probe.reason || 'blocked');
+      // Offer approximate IP-based fallback when direct geolocation is unavailable
+      try {
+        const approx = await ipApproximateLocation();
+        if (approx) {
+          if (mapInstanceRef.current && markerRef.current) {
+            try { markerRef.current.setLatLng([approx.lat, approx.lng]); } catch {}
+            try { mapInstanceRef.current.setView([approx.lat, approx.lng], 13, { animate: true }); } catch {}
+          }
+          setLatlng(approx);
+          if (typeof onChange === 'function') onChange(approx);
+          setStatus('موقعیت تقریبی بر اساس IP تنظیم شد — لطفاً روی نقشه دقیق کنید.');
+        }
+      } catch {}
       return;
     }
     setLocationLoading(true);
