@@ -580,21 +580,19 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
     ]
   );
 
-  const handleUseMyLocation = () => {
-    (async () => {
-      const probe = await canUseGeolocation();
-      if (!probe.ok || !navigator.geolocation) {
-        setLocationError(
-          probe.reason === 'policy-blocked'
-            ? 'این صفحه اجازه دسترسی به موقعیت را ندارد (Permissions Policy).'
-            : probe.reason === 'insecure-context'
-            ? 'برای دسترسی به موقعیت باید از HTTPS یا localhost استفاده کنید.'
-            : 'مرورگر شما از خدمات موقعیت‌یابی پشتیبانی نمی‌کند.'
-        );
-        setGeoPolicyReason(probe.reason || 'blocked');
-        return;
-      }
-    })();
+  const handleUseMyLocation = async () => {
+    const probe = await canUseGeolocation();
+    if (!probe.ok || !navigator.geolocation) {
+      setLocationError(
+        probe.reason === 'policy-blocked'
+          ? 'این صفحه اجازه دسترسی به موقعیت را ندارد (Permissions Policy).'
+          : probe.reason === 'insecure-context'
+          ? 'برای دسترسی به موقعیت باید از HTTPS یا localhost استفاده کنید.'
+          : 'مرورگر شما از خدمات موقعیت‌یابی پشتیبانی نمی‌کند.'
+      );
+      setGeoPolicyReason(probe.reason || 'blocked');
+      return;
+    }
     setLocationLoading(true);
     setLocationError(null);
 
@@ -629,7 +627,7 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
     };
 
     // Try to get current position from browser and apply it (store as pending if map isn't ready yet)
-    navigator.geolocation?.getCurrentPosition(
+    navigator.geolocation.getCurrentPosition(
       (pos) => {
         try {
           const glat = pos.coords.latitude;
