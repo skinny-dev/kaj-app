@@ -172,6 +172,49 @@ async function reverseGeocodeNeshan(
   }
 }
 
+// Check whether geolocation is likely allowed in this document
+async function canUseGeolocation(): Promise<{ ok: boolean; reason?: string }> {
+  try {
+    if (!('geolocation' in navigator)) {
+      return { ok: false, reason: 'unsupported' };
+    }
+    // Geolocation requires secure context (https or localhost)
+    if (!window.isSecureContext) {
+      return { ok: false, reason: 'insecure-context' };
+    }
+    // If embedded in an iframe without proper allow, a Permissions Policy may block it.
+    // Try modern API first
+    const anyDoc: any = document as any;
+    const allows = (() => {
+      try {
+        if (anyDoc.permissionsPolicy && typeof anyDoc.permissionsPolicy.allowsFeature === 'function') {
+          return anyDoc.permissionsPolicy.allowsFeature('geolocation');
+        }
+      } catch {}
+      try {
+        if (anyDoc.featurePolicy && typeof anyDoc.featurePolicy.allowsFeature === 'function') {
+          return anyDoc.featurePolicy.allowsFeature('geolocation');
+        }
+      } catch {}
+      return true; // if unknown, optimistically allow
+    })();
+    if (!allows) {
+      return { ok: false, reason: 'policy-blocked' };
+    }
+    // Probe current permission state when available
+    if (navigator.permissions && typeof navigator.permissions.query === 'function') {
+      try {
+        const p: any = await navigator.permissions.query({ name: 'geolocation' as any });
+        if (p && p.state === 'denied') return { ok: false, reason: 'permission-denied' };
+        // 'prompt' or 'granted' are acceptable to attempt
+      } catch {}
+    }
+    return { ok: true };
+  } catch {
+    return { ok: true };
+  }
+}
+
 export const LocationPicker: React.FC<LocationPickerProps> = ({
   apiKey,
   initialCenter = { lat: 35.699739, lng: 51.338097 },
@@ -402,18 +445,32 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
           } catch {}
         }
 
-        // Try browser geolocation for better UX
-        if (!readOnly && !value && navigator.geolocation) {
-          navigator.geolocation.getCurrentPosition(
-            (pos) => {
-              const glat = pos.coords.latitude;
-              const glng = pos.coords.longitude;
-              map.setView([glat, glng], 16);
-              updatePosition(glat, glng);
-            },
-            () => {},
-            { enableHighAccuracy: true, timeout: 5000 }
-          );
+        // Try browser geolocation for better UX (only when policy/context allows)
+        if (!readOnly && !value) {
+          try {
+            const probe = await canUseGeolocation();
+            if (probe.ok && navigator.geolocation) {
+              navigator.geolocation.getCurrentPosition(
+                (pos) => {
+                  const glat = pos.coords.latitude;
+                  const glng = pos.coords.longitude;
+                  map.setView([glat, glng], 16);
+                  updatePosition(glat, glng);
+                },
+                () => {},
+                { enableHighAccuracy: true, timeout: 5000 }
+              );
+            } else if (!probe.ok) {
+              // Avoid repeated attempts when blocked by policy and surface a concise hint for the user
+              setStatus(
+                probe.reason === 'policy-blocked'
+                  ? 'دسترسی به موقعیت توسط تنظیمات امنیتی صفحه غیرفعال شده است.'
+                  : probe.reason === 'insecure-context'
+                  ? 'برای استفاده از موقعیت، از اتصال امن (HTTPS) استفاده کنید.'
+                  : 'امکان دسترسی به موقعیت فراهم نیست.'
+              );
+            }
+          } catch {}
         }
       } catch (e) {
         console.error("[LocationPicker] Map init failed", e);
@@ -498,10 +555,19 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
   );
 
   const handleUseMyLocation = () => {
-    if (!navigator.geolocation) {
-      setLocationError("مرورگر شما از خدمات موقعیت‌یابی پشتیبانی نمی‌کند.");
-      return;
-    }
+    (async () => {
+      const probe = await canUseGeolocation();
+      if (!probe.ok || !navigator.geolocation) {
+        setLocationError(
+          probe.reason === 'policy-blocked'
+            ? 'این صفحه اجازه دسترسی به موقعیت را ندارد (Permissions Policy).'
+            : probe.reason === 'insecure-context'
+            ? 'برای دسترسی به موقعیت باید از HTTPS یا localhost استفاده کنید.'
+            : 'مرورگر شما از خدمات موقعیت‌یابی پشتیبانی نمی‌کند.'
+        );
+        return;
+      }
+    })();
     setLocationLoading(true);
     setLocationError(null);
 
@@ -518,7 +584,7 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
         // Then animate the map to that position
         mapInstanceRef.current.setView([next.lat, next.lng], 16, {
           animate: true,
-          duration: 1
+          duration: 1,
         });
 
         // Update state and trigger onChange
@@ -536,13 +602,13 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
     };
 
     // Try to get current position from browser and apply it (store as pending if map isn't ready yet)
-    navigator.geolocation.getCurrentPosition(
+    navigator.geolocation?.getCurrentPosition(
       (pos) => {
         try {
           const glat = pos.coords.latitude;
           const glng = pos.coords.longitude;
           const next = { lat: glat, lng: glng };
-          
+
           console.log("Got position:", next);
 
           // Ensure the map is ready
@@ -550,7 +616,7 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
             console.log("Map or marker not ready, storing as pending");
             pendingPositionRef.current = next;
             setLatlng(next);
-            
+
             // Try to apply with increasing delays
             const attempts = [100, 300, 800, 1500];
             attempts.forEach((delay) =>
