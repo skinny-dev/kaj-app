@@ -197,43 +197,46 @@ async function forwardGeocodeOSM(query: string): Promise<LatLng | null> {
 // Check whether geolocation is likely allowed in this document
 async function canUseGeolocation(): Promise<{ ok: boolean; reason?: string }> {
   try {
-    if (!('geolocation' in navigator)) {
-      return { ok: false, reason: 'unsupported' };
-    }
-    // Geolocation requires secure context (https or localhost)
-    if (!window.isSecureContext) {
-      return { ok: false, reason: 'insecure-context' };
-    }
-    // If embedded in an iframe without proper allow, a Permissions Policy may block it.
-    // Try modern API first
+    if (!('geolocation' in navigator)) return { ok: false, reason: 'unsupported' };
+    // Requires HTTPS (or localhost)
+    if (!window.isSecureContext) return { ok: false, reason: 'insecure-context' };
+
+    const inIframe = (() => {
+      try { return window.self !== window.top; } catch { return true; }
+    })();
+
+    // Check permissions policy where available
+    let policyAllows: boolean | null = null;
     const anyDoc: any = document as any;
-    const allows = (() => {
-      try {
-        if (anyDoc.permissionsPolicy && typeof anyDoc.permissionsPolicy.allowsFeature === 'function') {
-          return anyDoc.permissionsPolicy.allowsFeature('geolocation');
-        }
-      } catch {}
+    try {
+      if (anyDoc.permissionsPolicy && typeof anyDoc.permissionsPolicy.allowsFeature === 'function') {
+        policyAllows = !!anyDoc.permissionsPolicy.allowsFeature('geolocation');
+      }
+    } catch {}
+    if (policyAllows === null) {
       try {
         if (anyDoc.featurePolicy && typeof anyDoc.featurePolicy.allowsFeature === 'function') {
-          return anyDoc.featurePolicy.allowsFeature('geolocation');
+          policyAllows = !!anyDoc.featurePolicy.allowsFeature('geolocation');
         }
       } catch {}
-      return true; // if unknown, optimistically allow
-    })();
-    if (!allows) {
-      return { ok: false, reason: 'policy-blocked' };
     }
+
+    if (policyAllows === false) return { ok: false, reason: 'policy-blocked' };
+    // If embedded in an iframe and we cannot determine policy, default to blocked to avoid violations
+    if (inIframe && policyAllows === null) return { ok: false, reason: 'policy-unknown-iframe' };
+
     // Probe current permission state when available
-    if (navigator.permissions && typeof navigator.permissions.query === 'function') {
-      try {
+    try {
+      if (navigator.permissions && typeof navigator.permissions.query === 'function') {
         const p: any = await navigator.permissions.query({ name: 'geolocation' as any });
         if (p && p.state === 'denied') return { ok: false, reason: 'permission-denied' };
-        // 'prompt' or 'granted' are acceptable to attempt
-      } catch {}
-    }
+        // 'prompt' or 'granted' are acceptable
+      }
+    } catch {}
     return { ok: true };
   } catch {
-    return { ok: true };
+    // Be conservative: if detection fails, avoid calling geolocation
+    return { ok: false, reason: 'unknown' };
   }
 }
 
@@ -490,6 +493,8 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
               setStatus(
                 probe.reason === 'policy-blocked'
                   ? 'دسترسی به موقعیت توسط تنظیمات امنیتی صفحه غیرفعال شده است.'
+                  : probe.reason === 'policy-unknown-iframe'
+                  ? 'این صفحه در یک iframe است و اجازه موقعیت مشخص نیست.'
                   : probe.reason === 'insecure-context'
                   ? 'برای استفاده از موقعیت، از اتصال امن (HTTPS) استفاده کنید.'
                   : 'امکان دسترسی به موقعیت فراهم نیست.'
