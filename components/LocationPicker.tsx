@@ -713,31 +713,6 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
         }
       } catch {}
 
-      // If we can force-try (user initiated) and geolocation API exists, do a single attempt
-      if (probe.forceTry && navigator.geolocation) {
-        setLocationLoading(true);
-        try {
-          navigator.geolocation.getCurrentPosition(
-            (pos) => {
-              applyPositionNow({ lat: pos.coords.latitude, lng: pos.coords.longitude }, 16, true);
-              setLocationLoading(false);
-            },
-            async () => {
-              setLocationLoading(false);
-              // Fallback to IP-based approximation
-              try {
-                const approx = await ipApproximateLocation();
-                if (approx) applyPositionNow(approx, 13, true);
-              } catch {}
-            },
-            { enableHighAccuracy: true, timeout: 10000, maximumAge: 300000 }
-          );
-        } catch {
-          setLocationLoading(false);
-        }
-        return;
-      }
-
       // Otherwise, surface error and try IP-based approximation
       setLocationError(
         probe.reason === 'policy-blocked'
