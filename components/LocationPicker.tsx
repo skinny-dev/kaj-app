@@ -237,7 +237,7 @@ async function ipApproximateLocation(): Promise<LatLng | null> {
 
 
 // Check whether geolocation is likely allowed in this document
-async function canUseGeolocation(): Promise<{ ok: boolean; reason?: string }> {
+async function canUseGeolocation(): Promise<{ ok: boolean; reason?: string; forceTry?: boolean; inIframe?: boolean }> {
   try {
     if (!('geolocation' in navigator)) return { ok: false, reason: 'unsupported' };
     // Requires HTTPS (or localhost)
@@ -263,22 +263,28 @@ async function canUseGeolocation(): Promise<{ ok: boolean; reason?: string }> {
       } catch {}
     }
 
-    if (policyAllows === false) return { ok: false, reason: 'policy-blocked' };
-    // If embedded in an iframe and we cannot determine policy, default to blocked to avoid violations
-    if (inIframe && policyAllows === null) return { ok: false, reason: 'policy-unknown-iframe' };
+    if (policyAllows === false) return { ok: false, reason: 'policy-blocked', inIframe };
 
     // Probe current permission state when available
+    let permState: 'granted' | 'denied' | 'prompt' | null = null;
     try {
       if (navigator.permissions && typeof navigator.permissions.query === 'function') {
         const p: any = await navigator.permissions.query({ name: 'geolocation' as any });
-        if (p && p.state === 'denied') return { ok: false, reason: 'permission-denied' };
-        // 'prompt' or 'granted' are acceptable
+        if (p && (p.state === 'granted' || p.state === 'prompt' || p.state === 'denied')) permState = p.state;
       }
     } catch {}
-    return { ok: true };
+
+    // If embedded in an iframe and we cannot determine policy, be cautious but allow a user-initiated force try
+    if (inIframe && policyAllows === null) {
+      if (permState === 'granted' || permState === 'prompt') return { ok: true, inIframe };
+      return { ok: false, reason: 'policy-unknown-iframe', forceTry: true, inIframe };
+    }
+
+    if (permState === 'denied') return { ok: false, reason: 'permission-denied', inIframe };
+    return { ok: true, inIframe };
   } catch {
     // Be conservative: if detection fails, avoid calling geolocation
-    return { ok: false, reason: 'unknown' };
+    return { ok: false, reason: 'unknown', forceTry: true };
   }
 }
 
@@ -317,6 +323,52 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
   const [geoPolicyReason, setGeoPolicyReason] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [searchLoading, setSearchLoading] = useState<boolean>(false);
+  const [geoForceTry, setGeoForceTry] = useState<boolean>(false);
+  const [isInIframe, setIsInIframe] = useState<boolean | null>(null);
+  const [parentLocationLoading, setParentLocationLoading] = useState<boolean>(false);
+
+  // Helper to apply a position to map + marker + state immediately
+  const applyPositionNow = (next: LatLng, zoom = 16, animate = true) => {
+    try {
+      if (markerRef.current) {
+        try { markerRef.current.setLatLng([next.lat, next.lng]); } catch {}
+      }
+      if (mapInstanceRef.current) {
+        try { mapInstanceRef.current.setView([next.lat, next.lng], zoom, { animate }); } catch {}
+      }
+    } catch {}
+    setLatlng(next);
+    if (typeof onChange === 'function') onChange(next);
+    setStatus("موقعیت شما روی نقشه نمایش داده شد");
+  };
+
+  // Ask parent window (if embedded) to provide geolocation via postMessage
+  const requestLocationFromParent = (timeoutMs = 4000): Promise<LatLng | null> => {
+    return new Promise((resolve) => {
+      let done = false;
+      const cleanup = () => {
+        try { window.removeEventListener('message', onMsg as any); } catch {}
+      };
+      const onMsg = (evt: MessageEvent) => {
+        try {
+          const d: any = evt.data;
+          if (!d || typeof d !== 'object') return;
+          if (d.type === 'kaj-geo:position') {
+            const la = Number(d.lat);
+            const lo = Number(d.lng ?? d.lon);
+            if (!isNaN(la) && !isNaN(lo)) {
+              done = true; cleanup(); resolve({ lat: la, lng: lo });
+            }
+          }
+        } catch {}
+      };
+      try { window.addEventListener('message', onMsg as any); } catch {}
+      try {
+        window.parent && window.parent.postMessage({ type: 'kaj-geo:request' }, '*');
+      } catch {}
+      window.setTimeout(() => { if (!done) { cleanup(); resolve(null); } }, timeoutMs);
+    });
+  };
 
   useEffect(() => {
     let map: any;
@@ -519,6 +571,8 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
         if (!readOnly && !value) {
           try {
             const probe = await canUseGeolocation();
+            setIsInIframe(typeof probe.inIframe === 'boolean' ? probe.inIframe : null);
+            setGeoForceTry(!!probe.forceTry);
             if (probe.ok && navigator.geolocation) {
               navigator.geolocation.getCurrentPosition(
                 (pos) => {
@@ -542,6 +596,16 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
                   : 'امکان دسترسی به موقعیت فراهم نیست.'
               );
               setGeoPolicyReason(probe.reason || 'blocked');
+              // If embedded, try asking the parent window for a position via postMessage
+              try {
+                const parentPos = probe.inIframe ? await requestLocationFromParent(3500) : null;
+                if (parentPos) {
+                  if (map && map.setView) map.setView([parentPos.lat, parentPos.lng], 15);
+                  updatePosition(parentPos.lat, parentPos.lng);
+                  setStatus('موقعیت از صفحه والد دریافت شد.');
+                  return;
+                }
+              } catch {}
               // As a best-effort fallback, try approximate location via IP and center the map
               try {
                 const approx = await ipApproximateLocation();
@@ -638,7 +702,43 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
 
   const handleUseMyLocation = async () => {
     const probe = await canUseGeolocation();
+    setIsInIframe(typeof probe.inIframe === 'boolean' ? probe.inIframe : null);
+    setGeoForceTry(!!probe.forceTry);
     if (!probe.ok || !navigator.geolocation) {
+      // If embedded, first try asking parent for a position
+      try {
+        if (probe.inIframe) {
+          const parentPos = await requestLocationFromParent(3500);
+          if (parentPos) { applyPositionNow(parentPos, 16, true); return; }
+        }
+      } catch {}
+
+      // If we can force-try (user initiated) and geolocation API exists, do a single attempt
+      if (probe.forceTry && navigator.geolocation) {
+        setLocationLoading(true);
+        try {
+          navigator.geolocation.getCurrentPosition(
+            (pos) => {
+              applyPositionNow({ lat: pos.coords.latitude, lng: pos.coords.longitude }, 16, true);
+              setLocationLoading(false);
+            },
+            async () => {
+              setLocationLoading(false);
+              // Fallback to IP-based approximation
+              try {
+                const approx = await ipApproximateLocation();
+                if (approx) applyPositionNow(approx, 13, true);
+              } catch {}
+            },
+            { enableHighAccuracy: true, timeout: 10000, maximumAge: 300000 }
+          );
+        } catch {
+          setLocationLoading(false);
+        }
+        return;
+      }
+
+      // Otherwise, surface error and try IP-based approximation
       setLocationError(
         probe.reason === 'policy-blocked'
           ? 'این صفحه اجازه دسترسی به موقعیت را ندارد (Permissions Policy).'
@@ -647,18 +747,9 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
           : 'مرورگر شما از خدمات موقعیت‌یابی پشتیبانی نمی‌کند.'
       );
       setGeoPolicyReason(probe.reason || 'blocked');
-      // Offer approximate IP-based fallback when direct geolocation is unavailable
       try {
         const approx = await ipApproximateLocation();
-        if (approx) {
-          if (mapInstanceRef.current && markerRef.current) {
-            try { markerRef.current.setLatLng([approx.lat, approx.lng]); } catch {}
-            try { mapInstanceRef.current.setView([approx.lat, approx.lng], 13, { animate: true }); } catch {}
-          }
-          setLatlng(approx);
-          if (typeof onChange === 'function') onChange(approx);
-          setStatus('موقعیت تقریبی بر اساس IP تنظیم شد — لطفاً روی نقشه دقیق کنید.');
-        }
+        if (approx) applyPositionNow(approx, 13, true);
       } catch {}
       return;
     }
@@ -771,6 +862,40 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
     } catch {}
   };
 
+  const handleRequestFromParentClick = async () => {
+    try {
+      setParentLocationLoading(true);
+      const pos = await requestLocationFromParent(4000);
+      if (pos) applyPositionNow(pos, 16, true);
+      else setLocationError('پاسخی از صفحه والد دریافت نشد.');
+    } finally {
+      setParentLocationLoading(false);
+    }
+  };
+
+  const handleForceTryClick = async () => {
+    if (!('geolocation' in navigator)) return;
+    setLocationLoading(true);
+    try {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          applyPositionNow({ lat: pos.coords.latitude, lng: pos.coords.longitude }, 16, true);
+          setLocationLoading(false);
+        },
+        async () => {
+          setLocationLoading(false);
+          try {
+            const approx = await ipApproximateLocation();
+            if (approx) applyPositionNow(approx, 13, true);
+          } catch {}
+        },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 300000 }
+      );
+    } catch {
+      setLocationLoading(false);
+    }
+  };
+
   // If opened with #geo=1 and geolocation allowed, auto-try once
   useEffect(() => {
     (async () => {
@@ -861,15 +986,38 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
       )}
       {/* Permissions-Policy fallback CTA */}
       {geoPolicyReason && !hideHeader && (
-        <div className="text-xs text-amber-300 bg-amber-900/30 border border-amber-700 rounded p-2">
-          دسترسی به موقعیت در این صفحه محدود شده است. می‌توانید اپ را در زبانه جدید باز کنید تا اجازه موقعیت داده شود.
+        <div className="text-xs text-amber-300 bg-amber-900/30 border border-amber-700 rounded p-2 flex flex-wrap items-center gap-2">
+          <span className="mb-1">دسترسی به موقعیت در این صفحه محدود شده است.</span>
           <button
             type="button"
             onClick={openInNewTabForGeo}
-            className="ml-2 inline-block px-2 py-1 bg-amber-700 hover:bg-amber-600 rounded text-white"
+            className="inline-flex items-center px-2 py-1 bg-amber-700 hover:bg-amber-600 rounded text-white"
+            title="باز کردن اپ در تب جدید برای نمایش درخواست دسترسی"
           >
             باز کردن در صفحه جدید
           </button>
+          {isInIframe && (
+            <button
+              type="button"
+              onClick={handleRequestFromParentClick}
+              className="inline-flex items-center px-2 py-1 bg-amber-700/70 hover:bg-amber-600/70 rounded text-white"
+              title="درخواست موقعیت از صفحه والد"
+              disabled={parentLocationLoading}
+            >
+              {parentLocationLoading ? 'در حال درخواست از والد…' : 'درخواست از والد'}
+            </button>
+          )}
+          {geoForceTry && typeof navigator !== 'undefined' && 'geolocation' in navigator && (
+            <button
+              type="button"
+              onClick={handleForceTryClick}
+              className="inline-flex items-center px-2 py-1 bg-amber-600 hover:bg-amber-500 rounded text-white"
+              title="تلاش مستقیم برای دریافت موقعیت"
+              disabled={locationLoading}
+            >
+              {locationLoading ? 'در حال دریافت…' : 'تلاش مستقیم'}
+            </button>
+          )}
         </div>
       )}
       {/* Forward geocoding search */}
