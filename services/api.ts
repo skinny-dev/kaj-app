@@ -253,7 +253,7 @@ export const initiatePayment = async (orderData: {
   phone?: string;
   totalAmount: number;
   paymentMethod: "online" | "cash";
-  orderType?: "DELIVERY" | "PICKUP";
+  orderType?: "DELIVERY" | "PICKUP" | "DINE_IN";
 }): Promise<{
   success: boolean;
   paymentUrl?: string;
@@ -262,7 +262,8 @@ export const initiatePayment = async (orderData: {
 }> => {
   try {
     // Step 1: Create the order first
-    const orderType: "DELIVERY" | "PICKUP" = orderData.orderType || "DELIVERY";
+    const orderType: "DELIVERY" | "PICKUP" | "DINE_IN" =
+      orderData.orderType || "DELIVERY";
     // Backend expects: DINE_IN | DELIVERY | TAKEOUT (not PICKUP)
     const normalizedType = orderType === "PICKUP" ? "TAKEOUT" : orderType;
     const orderPayload = {

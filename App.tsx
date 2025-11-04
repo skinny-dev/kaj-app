@@ -117,7 +117,7 @@ const AppContent: React.FC = () => {
     address: string;
     phone: string;
     name: string;
-    orderType?: "DELIVERY" | "PICKUP";
+    orderType?: "DELIVERY" | "PICKUP" | "DINE_IN";
   }) => {
     const total = getCartTotal();
 

@@ -55,7 +55,9 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({
   const [showPicker, setShowPicker] = useState(false);
   const [showAddressModal, setShowAddressModal] = useState(false);
   const [savingAddress, setSavingAddress] = useState(false);
-  const [orderType, setOrderType] = useState<"DELIVERY" | "PICKUP">("DELIVERY");
+  const [orderType, setOrderType] = useState<
+    "DELIVERY" | "PICKUP" | "DINE_IN"
+  >("DELIVERY");
   const [guestAddresses, setGuestAddresses] = useState<string[]>(() => {
     try {
       const raw = localStorage.getItem("kaj-guest-addresses");
@@ -218,6 +220,50 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({
       }
     }
   }, [currentUser]);
+
+  // Auto-select order type from URL query parameters (e.g., dine-in links)
+  useEffect(() => {
+    try {
+      const search = window.location.search || "";
+      const params = new URLSearchParams(search);
+
+      const get = (k: string) => (params.get(k) || "").toLowerCase();
+      const has = (k: string) => params.has(k);
+
+      // Normalize common indicators
+      const type = get("type") || get("orderType") || get("ordertype");
+      const mode = get("mode") || get("service");
+      const dinein = get("dinein") || get("dine-in") || get("dine_in");
+      const salon = get("salon") || get("سالن");
+
+      const truthy = (v: string) => ["1", "true", "yes", "y"].includes(v);
+
+      const isDineInHint =
+        truthy(dinein) ||
+        ["dinein", "dine-in", "dine_in", "dinein", "dine in"].includes(
+          type
+        ) ||
+        ["salon", "inhouse", "in-house", "dinein"].includes(mode) ||
+        ["salon", "سالن"].includes(salon) ||
+        // If a table code is present, assume dine-in
+        has("table") ||
+        has("tableId") ||
+        has("desk") ||
+        has("deskId");
+
+      const isPickupHint =
+        ["pickup", "takeout", "take-away", "takeaway"].includes(type) ||
+        ["pickup", "takeout"].includes(mode);
+
+      const isDeliveryHint =
+        ["delivery", "send", "ارسال"].includes(type) ||
+        ["delivery", "send"].includes(mode);
+
+      if (isDineInHint) setOrderType("DINE_IN");
+      else if (isPickupHint) setOrderType("PICKUP");
+      else if (isDeliveryHint) setOrderType("DELIVERY");
+    } catch {}
+  }, []);
 
   const validateForm = async () => {
     const newErrors: { address?: string; phone?: string; name?: string } = {};
@@ -398,6 +444,17 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({
               }`}
             >
               تحویل حضوری
+            </button>
+            <button
+              type="button"
+              onClick={() => setOrderType("DINE_IN")}
+              className={`flex-1 rounded-lg p-3 border text-sm ${
+                orderType === "DINE_IN"
+                  ? "bg-gray-700 border-green-500 text-white"
+                  : "bg-gray-800 border-gray-700 text-gray-300"
+              }`}
+            >
+              سالن
             </button>
           </div>
         </div>
