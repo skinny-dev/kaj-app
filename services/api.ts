@@ -254,6 +254,7 @@ export const initiatePayment = async (orderData: {
   totalAmount: number;
   paymentMethod: "online" | "cash";
   orderType?: "DELIVERY" | "PICKUP" | "DINE_IN";
+  guestCount?: number;
 }): Promise<{
   success: boolean;
   paymentUrl?: string;
@@ -266,7 +267,7 @@ export const initiatePayment = async (orderData: {
       orderData.orderType || "DELIVERY";
     // Backend expects: DINE_IN | DELIVERY | TAKEOUT (not PICKUP)
     const normalizedType = orderType === "PICKUP" ? "TAKEOUT" : orderType;
-    const orderPayload = {
+    const orderPayload: any = {
       type: normalizedType,
       address: orderData.deliveryAddress || "",
       phone: orderData.phone || "",
@@ -281,6 +282,11 @@ export const initiatePayment = async (orderData: {
           })) || undefined,
       })),
     };
+
+    // Attach guestCount for DINE_IN orders when provided
+    if (normalizedType === "DINE_IN" && orderData.guestCount) {
+      orderPayload.guestCount = orderData.guestCount;
+    }
 
     const orderResponse = await apiRequest<{
       id: string;

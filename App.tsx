@@ -30,6 +30,8 @@ type PendingOrder = {
   address: string;
   phone: string;
   name: string;
+  orderType?: "DELIVERY" | "PICKUP" | "DINE_IN";
+  guestCount?: number;
 };
 
 const AppContent: React.FC = () => {
@@ -118,6 +120,7 @@ const AppContent: React.FC = () => {
     phone: string;
     name: string;
     orderType?: "DELIVERY" | "PICKUP" | "DINE_IN";
+    guestCount?: number;
   }) => {
     const total = getCartTotal();
 
@@ -163,6 +166,9 @@ const AppContent: React.FC = () => {
         totalAmount: total,
         paymentMethod: "online" as const,
         orderType: details.orderType || "DELIVERY",
+        ...(details.orderType === "DINE_IN" && details.guestCount
+          ? { guestCount: details.guestCount }
+          : {}),
       };
 
       const paymentResponse = await api.requestPayment(paymentData);

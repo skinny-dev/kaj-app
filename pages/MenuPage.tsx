@@ -46,6 +46,44 @@ export const MenuPage: React.FC<MenuPageProps> = ({ onNavigate }) => {
     loadMenu();
   }, []);
 
+  // Persist dine-in intent when arriving via QR or URL hints on /menu
+  useEffect(() => {
+    try {
+      const params = new URLSearchParams(window.location.search || "");
+      const get = (k: string) => (params.get(k) || "").toLowerCase();
+      const has = (k: string) => params.has(k);
+      const truthy = (v: string) => ["1", "true", "yes", "y"].includes(v);
+
+      const type = get("type") || get("orderType") || get("ordertype");
+      const mode = get("mode") || get("service");
+      const dinein = get("dinein") || get("dine-in") || get("dine_in");
+      const salon = get("salon") || get("سالن");
+      const guests = get("guests") || get("guest") || get("persons");
+
+      const isDineInHint =
+        truthy(dinein) ||
+        ["dinein", "dine-in", "dine_in", "dine in"].includes(type) ||
+        ["salon", "inhouse", "in-house", "dinein"].includes(mode) ||
+        ["salon", "سالن"].includes(salon) ||
+        has("table") ||
+        has("tableId") ||
+        has("desk") ||
+        has("deskId");
+
+      if (isDineInHint) {
+        localStorage.setItem("kaj-dinein", "1");
+        localStorage.setItem("kaj-order-type", "DINE_IN");
+        // Initialize guest count if provided or not set yet
+        const parsed = parseInt(guests, 10);
+        if (!Number.isNaN(parsed) && parsed > 0) {
+          localStorage.setItem("kaj-guest-count", String(parsed));
+        } else if (!localStorage.getItem("kaj-guest-count")) {
+          localStorage.setItem("kaj-guest-count", "1");
+        }
+      }
+    } catch {}
+  }, []);
+
   const filteredItems = menuItems.filter(item => item.category === selectedCategory);
 
   const handleProfileClick = () => {

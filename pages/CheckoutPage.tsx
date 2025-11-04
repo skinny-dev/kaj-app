@@ -18,6 +18,8 @@ interface CheckoutPageProps {
     phone: string;
     notes: string;
     name: string;
+    orderType?: "DELIVERY" | "PICKUP" | "DINE_IN";
+    guestCount?: number;
   }) => void;
   onGuestCheckout: (details: {
     items: CartItem[];
@@ -26,6 +28,8 @@ interface CheckoutPageProps {
     phone: string;
     notes: string;
     name: string;
+    orderType?: "DELIVERY" | "PICKUP" | "DINE_IN";
+    guestCount?: number;
   }) => void;
 }
 
@@ -49,6 +53,7 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({
     address?: string;
     phone?: string;
     name?: string;
+    guestCount?: string;
   }>({});
   const [isAddingNewAddress, setIsAddingNewAddress] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -58,6 +63,19 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({
   const [orderType, setOrderType] = useState<
     "DELIVERY" | "PICKUP" | "DINE_IN"
   >("DELIVERY");
+  const [guestCount, setGuestCount] = useState<number>(() => {
+    try {
+      const params = new URLSearchParams(window.location.search || "");
+      const guests = params.get("guests") || params.get("guest");
+      const fromUrl = guests ? parseInt(guests, 10) : NaN;
+      if (!Number.isNaN(fromUrl) && fromUrl > 0) return fromUrl;
+      const stored = localStorage.getItem("kaj-guest-count");
+      const fromStore = stored ? parseInt(stored, 10) : NaN;
+      return !Number.isNaN(fromStore) && fromStore > 0 ? fromStore : 1;
+    } catch {
+      return 1;
+    }
+  });
   const [guestAddresses, setGuestAddresses] = useState<string[]>(() => {
     try {
       const raw = localStorage.getItem("kaj-guest-addresses");
@@ -259,14 +277,61 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({
         ["delivery", "send", "ارسال"].includes(type) ||
         ["delivery", "send"].includes(mode);
 
-      if (isDineInHint) setOrderType("DINE_IN");
-      else if (isPickupHint) setOrderType("PICKUP");
+      if (isDineInHint) {
+        setOrderType("DINE_IN");
+        localStorage.setItem("kaj-dinein", "1");
+        localStorage.setItem("kaj-order-type", "DINE_IN");
+        // Ensure URL carries dinein=1 (and guests if available)
+        const url = new URL(window.location.href);
+        if (url.searchParams.get("dinein") !== "1") {
+          url.searchParams.set("dinein", "1");
+        }
+        const gc = String(guestCount || 1);
+        if (!url.searchParams.get("guests") && gc) {
+          url.searchParams.set("guests", gc);
+        }
+        window.history.replaceState({}, "", url.toString());
+      } else if (isPickupHint) setOrderType("PICKUP");
       else if (isDeliveryHint) setOrderType("DELIVERY");
+      else {
+        // No hint in URL: fall back to localStorage
+        const persisted = localStorage.getItem("kaj-dinein");
+        if (persisted === "1") {
+          setOrderType("DINE_IN");
+          const url = new URL(window.location.href);
+          if (url.searchParams.get("dinein") !== "1") {
+            url.searchParams.set("dinein", "1");
+          }
+          const storedGc = localStorage.getItem("kaj-guest-count");
+          if (storedGc && !url.searchParams.get("guests")) {
+            url.searchParams.set("guests", storedGc);
+          }
+          window.history.replaceState({}, "", url.toString());
+        }
+      }
     } catch {}
   }, []);
 
+  // Persist guest count changes
+  useEffect(() => {
+    try {
+      localStorage.setItem("kaj-guest-count", String(guestCount || 1));
+      // Keep URL in sync when in DINE_IN mode
+      if (orderType === "DINE_IN") {
+        const url = new URL(window.location.href);
+        url.searchParams.set("guests", String(guestCount || 1));
+        window.history.replaceState({}, "", url.toString());
+      }
+    } catch {}
+  }, [guestCount, orderType]);
+
   const validateForm = async () => {
-    const newErrors: { address?: string; phone?: string; name?: string } = {};
+    const newErrors: {
+      address?: string;
+      phone?: string;
+      name?: string;
+      guestCount?: string;
+    } = {};
 
     // Name is always required
     if (name.trim().length < 3) {
@@ -293,6 +358,10 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({
             // Fail-open on network errors
           }
         }
+      }
+    } else if (orderType === "DINE_IN") {
+      if (!guestCount || guestCount < 1) {
+        newErrors.guestCount = "لطفاً تعداد نفرات را وارد کنید.";
       }
     }
     if (!/^\d{11}$/.test(phone)) {
@@ -330,6 +399,7 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({
           notes,
           name: name.trim(),
           orderType,
+          guestCount: orderType === "DINE_IN" ? guestCount : undefined,
         };
 
         if (currentUser) {
@@ -458,6 +528,28 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({
             </button>
           </div>
         </div>
+
+        {orderType === "DINE_IN" && (
+          <div>
+            <span className="block text-sm font-medium text-gray-300 mb-3">
+              تعداد نفرات
+            </span>
+            <div className="flex items-center gap-2">
+              <input
+                type="number"
+                min={1}
+                value={guestCount}
+                onChange={(e) => setGuestCount(Math.max(1, parseInt(e.target.value || "1", 10)))}
+                className="w-24 bg-gray-800 border border-gray-600 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-green-500 text-white text-center"
+                placeholder="1"
+              />
+              <span className="text-sm text-gray-400">نفر</span>
+            </div>
+            {errors.guestCount && (
+              <p className="text-red-400 text-sm mt-2">{errors.guestCount}</p>
+            )}
+          </div>
+        )}
 
         {orderType === "DELIVERY" && (
           <div>
