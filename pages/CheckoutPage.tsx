@@ -589,40 +589,50 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({
 
         {orderType === "DINE_IN" && (
           <div>
-            <span className="block text-sm font-medium text-gray-300 mb-3">
-              تعداد نفرات
-            </span>
-            <div className="flex items-center gap-2">
-              <input
-                type="number"
-                min={1}
-                value={guestCount}
-                onChange={(e) => setGuestCount(Math.max(1, parseInt(e.target.value || "1", 10)))}
-                className="w-24 bg-gray-800 border border-gray-600 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-green-500 text-white text-center"
-                placeholder="1"
-              />
-              <span className="text-sm text-gray-400">نفر</span>
-            </div>
-            {errors.guestCount && (
-              <p className="text-red-400 text-sm mt-2">{errors.guestCount}</p>
-            )}
-            <div className="mt-4">
-              <span className="block text-sm font-medium text-gray-300 mb-3">
-                شماره میز
-              </span>
-              <div className="flex items-center gap-2">
-                <input
-                  type="number"
-                  min={1}
-                  value={tableId || 0}
-                  onChange={(e) => setTableId(Math.max(1, parseInt(e.target.value || "0", 10)))}
-                  className="w-24 bg-gray-800 border border-gray-600 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-green-500 text-white text-center"
-                  placeholder="1"
-                />
+            <div className="flex items-end gap-3">
+              {/* Guest count (editable) */}
+              <div className="flex-1">
+                <label className="block text-xs text-gray-400 mb-1">
+                  تعداد نفرات
+                </label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    min={1}
+                    value={guestCount}
+                    onChange={(e) =>
+                      setGuestCount(
+                        Math.max(1, parseInt(e.target.value || "1", 10))
+                      )
+                    }
+                    className="w-24 bg-gray-800 border border-gray-600 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-green-500 text-white text-center"
+                    placeholder="1"
+                  />
+                  <span className="text-sm text-gray-400">نفر</span>
+                </div>
+                {errors.guestCount && (
+                  <p className="text-red-400 text-xs mt-1">
+                    {errors.guestCount}
+                  </p>
+                )}
               </div>
-              {errors.tableId && (
-                <p className="text-red-400 text-sm mt-2">{errors.tableId}</p>
-              )}
+
+              {/* Table number (read-only display) */}
+              <div className="flex-1">
+                <label className="block text-xs text-gray-400 mb-1">
+                  شماره میز
+                </label>
+                <div
+                  className="w-24 bg-gray-800 border border-gray-600 rounded-lg p-3 text-center text-white select-none"
+                  aria-label="شماره میز"
+                  title={tableId ? `میز ${tableId}` : "شماره میز از طریق QR مشخص می‌شود"}
+                >
+                  {tableId && tableId > 0 ? tableId : "—"}
+                </div>
+                {errors.tableId && (
+                  <p className="text-red-400 text-xs mt-1">{errors.tableId}</p>
+                )}
+              </div>
             </div>
           </div>
         )}
