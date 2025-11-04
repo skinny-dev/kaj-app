@@ -49,7 +49,13 @@ export const MenuPage: React.FC<MenuPageProps> = ({ onNavigate }) => {
   // Persist dine-in intent when arriving via QR or URL hints on /menu
   useEffect(() => {
     try {
-      const params = new URLSearchParams(window.location.search || "");
+      // Normalize malformed query like ?a=1?b=2 => ?a=1&b=2
+      const raw = window.location.search || "";
+      const normalized =
+        raw && raw.includes("?")
+          ? "?" + raw.slice(1).replaceAll("?", "&")
+          : raw;
+      const params = new URLSearchParams(normalized);
       const get = (k: string) => (params.get(k) || "").toLowerCase();
       const has = (k: string) => params.has(k);
       const truthy = (v: string) => ["1", "true", "yes", "y"].includes(v);
@@ -59,6 +65,12 @@ export const MenuPage: React.FC<MenuPageProps> = ({ onNavigate }) => {
       const dinein = get("dinein") || get("dine-in") || get("dine_in");
       const salon = get("salon") || get("سالن");
       const guests = get("guests") || get("guest") || get("persons");
+      const table =
+        params.get("table") ||
+        params.get("tableId") ||
+        params.get("desk") ||
+        params.get("deskId") ||
+        "";
 
       const isDineInHint =
         truthy(dinein) ||
@@ -79,6 +91,11 @@ export const MenuPage: React.FC<MenuPageProps> = ({ onNavigate }) => {
           localStorage.setItem("kaj-guest-count", String(parsed));
         } else if (!localStorage.getItem("kaj-guest-count")) {
           localStorage.setItem("kaj-guest-count", "1");
+        }
+        // Persist table id if provided
+        const tParsed = parseInt((table || "").toString(), 10);
+        if (!Number.isNaN(tParsed) && tParsed > 0) {
+          localStorage.setItem("kaj-table-id", String(tParsed));
         }
       }
     } catch {}

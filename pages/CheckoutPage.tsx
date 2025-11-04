@@ -20,6 +20,7 @@ interface CheckoutPageProps {
     name: string;
     orderType?: "DELIVERY" | "PICKUP" | "DINE_IN";
     guestCount?: number;
+    tableId?: number;
   }) => void;
   onGuestCheckout: (details: {
     items: CartItem[];
@@ -30,6 +31,7 @@ interface CheckoutPageProps {
     name: string;
     orderType?: "DELIVERY" | "PICKUP" | "DINE_IN";
     guestCount?: number;
+    tableId?: number;
   }) => void;
 }
 
@@ -54,6 +56,7 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({
     phone?: string;
     name?: string;
     guestCount?: string;
+    tableId?: string;
   }>({});
   const [isAddingNewAddress, setIsAddingNewAddress] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -74,6 +77,30 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({
       return !Number.isNaN(fromStore) && fromStore > 0 ? fromStore : 1;
     } catch {
       return 1;
+    }
+  });
+  const [tableId, setTableId] = useState<number>(() => {
+    try {
+      // Normalize malformed query like ?a=1?b=2
+      const raw = window.location.search || "";
+      const normalized =
+        raw && raw.includes("?")
+          ? "?" + raw.slice(1).replaceAll("?", "&")
+          : raw;
+      const params = new URLSearchParams(normalized);
+      const t =
+        params.get("table") ||
+        params.get("tableId") ||
+        params.get("desk") ||
+        params.get("deskId") ||
+        "";
+      const fromUrl = t ? parseInt(String(t), 10) : NaN;
+      if (!Number.isNaN(fromUrl) && fromUrl > 0) return fromUrl;
+      const stored = localStorage.getItem("kaj-table-id");
+      const fromStore = stored ? parseInt(stored, 10) : NaN;
+      return !Number.isNaN(fromStore) && fromStore > 0 ? fromStore : 0;
+    } catch {
+      return 0;
     }
   });
   const [guestAddresses, setGuestAddresses] = useState<string[]>(() => {
@@ -242,7 +269,10 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({
   // Auto-select order type from URL query parameters (e.g., dine-in links)
   useEffect(() => {
     try {
-      const search = window.location.search || "";
+      // Normalize malformed query like ?a=1?b=2
+      const raw = window.location.search || "";
+      const search =
+        raw && raw.includes("?") ? "?" + raw.slice(1).replaceAll("?", "&") : raw;
       const params = new URLSearchParams(search);
 
       const get = (k: string) => (params.get(k) || "").toLowerCase();
@@ -290,6 +320,10 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({
         if (!url.searchParams.get("guests") && gc) {
           url.searchParams.set("guests", gc);
         }
+        if (tableId && tableId > 0) {
+          url.searchParams.set("table", String(tableId));
+          localStorage.setItem("kaj-table-id", String(tableId));
+        }
         window.history.replaceState({}, "", url.toString());
       } else if (isPickupHint) setOrderType("PICKUP");
       else if (isDeliveryHint) setOrderType("DELIVERY");
@@ -305,6 +339,11 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({
           const storedGc = localStorage.getItem("kaj-guest-count");
           if (storedGc && !url.searchParams.get("guests")) {
             url.searchParams.set("guests", storedGc);
+          }
+          const storedTable = localStorage.getItem("kaj-table-id");
+          if (storedTable && !url.searchParams.get("table")) {
+            url.searchParams.set("table", storedTable);
+            setTableId(parseInt(storedTable, 10) || 0);
           }
           window.history.replaceState({}, "", url.toString());
         }
@@ -325,12 +364,27 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({
     } catch {}
   }, [guestCount, orderType]);
 
+  // Persist/sync table id
+  useEffect(() => {
+    try {
+      if (tableId && tableId > 0) {
+        localStorage.setItem("kaj-table-id", String(tableId));
+        if (orderType === "DINE_IN") {
+          const url = new URL(window.location.href);
+          url.searchParams.set("table", String(tableId));
+          window.history.replaceState({}, "", url.toString());
+        }
+      }
+    } catch {}
+  }, [tableId, orderType]);
+
   const validateForm = async () => {
     const newErrors: {
       address?: string;
       phone?: string;
       name?: string;
       guestCount?: string;
+      tableId?: string;
     } = {};
 
     // Name is always required
@@ -362,6 +416,9 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({
     } else if (orderType === "DINE_IN") {
       if (!guestCount || guestCount < 1) {
         newErrors.guestCount = "لطفاً تعداد نفرات را وارد کنید.";
+      }
+      if (!tableId || tableId < 1) {
+        newErrors.tableId = "لطفاً شماره میز را وارد کنید.";
       }
     }
     if (!/^\d{11}$/.test(phone)) {
@@ -400,6 +457,7 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({
           name: name.trim(),
           orderType,
           guestCount: orderType === "DINE_IN" ? guestCount : undefined,
+          tableId: orderType === "DINE_IN" ? tableId : undefined,
         };
 
         if (currentUser) {
@@ -548,6 +606,24 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({
             {errors.guestCount && (
               <p className="text-red-400 text-sm mt-2">{errors.guestCount}</p>
             )}
+            <div className="mt-4">
+              <span className="block text-sm font-medium text-gray-300 mb-3">
+                شماره میز
+              </span>
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  min={1}
+                  value={tableId || 0}
+                  onChange={(e) => setTableId(Math.max(1, parseInt(e.target.value || "0", 10)))}
+                  className="w-24 bg-gray-800 border border-gray-600 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-green-500 text-white text-center"
+                  placeholder="1"
+                />
+              </div>
+              {errors.tableId && (
+                <p className="text-red-400 text-sm mt-2">{errors.tableId}</p>
+              )}
+            </div>
           </div>
         )}
 

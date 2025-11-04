@@ -32,6 +32,7 @@ type PendingOrder = {
   name: string;
   orderType?: "DELIVERY" | "PICKUP" | "DINE_IN";
   guestCount?: number;
+  tableId?: number;
 };
 
 const AppContent: React.FC = () => {
@@ -121,6 +122,7 @@ const AppContent: React.FC = () => {
     name: string;
     orderType?: "DELIVERY" | "PICKUP" | "DINE_IN";
     guestCount?: number;
+    tableId?: number;
   }) => {
     const total = getCartTotal();
 
@@ -168,6 +170,9 @@ const AppContent: React.FC = () => {
         orderType: details.orderType || "DELIVERY",
         ...(details.orderType === "DINE_IN" && details.guestCount
           ? { guestCount: details.guestCount }
+          : {}),
+        ...(details.orderType === "DINE_IN" && details.tableId
+          ? { tableId: details.tableId }
           : {}),
       };
 
