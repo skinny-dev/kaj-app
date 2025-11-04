@@ -29,6 +29,7 @@ type PendingOrder = {
   total: number;
   address: string;
   phone: string;
+  notes: string;
   name: string;
   orderType?: "DELIVERY" | "PICKUP" | "DINE_IN";
   guestCount?: number;
@@ -119,6 +120,7 @@ const AppContent: React.FC = () => {
     items: CartItem[];
     address: string;
     phone: string;
+    notes: string;
     name: string;
     orderType?: "DELIVERY" | "PICKUP" | "DINE_IN";
     guestCount?: number;
@@ -165,6 +167,7 @@ const AppContent: React.FC = () => {
         }),
         deliveryAddress: details.address,
         phone: details.phone,
+        notes: details.notes,
         totalAmount: total,
         paymentMethod: "online" as const,
         orderType: details.orderType || "DELIVERY",

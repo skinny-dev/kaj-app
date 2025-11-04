@@ -251,6 +251,7 @@ export const initiatePayment = async (orderData: {
   }>;
   deliveryAddress?: string;
   phone?: string;
+  notes?: string;
   totalAmount: number;
   paymentMethod: "online" | "cash";
   orderType?: "DELIVERY" | "PICKUP" | "DINE_IN";
@@ -272,6 +273,7 @@ export const initiatePayment = async (orderData: {
       type: normalizedType,
       address: orderData.deliveryAddress || "",
       phone: orderData.phone || "",
+      notes: orderData.notes || undefined,
       items: orderData.items.map((item) => ({
         productId: item.menuItemId, // API expects productId, not menuItemId
         quantity: item.quantity,
