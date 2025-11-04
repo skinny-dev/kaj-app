@@ -498,6 +498,26 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({
         <div className="w-10"></div> {/* Spacer */}
       </header>
 
+      {/* Dine-in table badge in header area */}
+      {orderType === "DINE_IN" && (
+        <div className="flex justify-center mb-4">
+          <div
+            className={`px-3 py-1 rounded-lg border text-sm ${
+              tableId && tableId > 0
+                ? "bg-gray-800 border-gray-600 text-white"
+                : "bg-yellow-900/30 border-yellow-600 text-yellow-300"
+            }`}
+            title={
+              tableId && tableId > 0
+                ? `میز ${tableId}`
+                : "شماره میز از طریق QR مشخص می‌شود"
+            }
+          >
+            {tableId && tableId > 0 ? `میز ${tableId}` : "شماره میز نامشخص"}
+          </div>
+        </div>
+      )}
+
       <form onSubmit={handleSubmit} className="space-y-6">
         <div>
           <label
@@ -590,8 +610,8 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({
         {orderType === "DINE_IN" && (
           <div>
             <div className="flex items-end gap-3">
-              {/* Guest count (editable) */}
-              <div className="flex-1">
+              {/* Guest count only */}
+              <div>
                 <label className="block text-xs text-gray-400 mb-1">
                   تعداد نفرات
                 </label>
@@ -616,24 +636,13 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({
                   </p>
                 )}
               </div>
-
-              {/* Table number (read-only display) */}
-              <div className="flex-1">
-                <label className="block text-xs text-gray-400 mb-1">
-                  شماره میز
-                </label>
-                <div
-                  className="w-24 bg-gray-800 border border-gray-600 rounded-lg p-3 text-center text-white select-none"
-                  aria-label="شماره میز"
-                  title={tableId ? `میز ${tableId}` : "شماره میز از طریق QR مشخص می‌شود"}
-                >
-                  {tableId && tableId > 0 ? tableId : "—"}
-                </div>
-                {errors.tableId && (
-                  <p className="text-red-400 text-xs mt-1">{errors.tableId}</p>
-                )}
-              </div>
             </div>
+            {/* If tableId missing, show a small warning beneath */}
+            {(!tableId || tableId < 1) && (
+              <p className="text-yellow-300 text-xs mt-2">
+                شماره میز باید از طریق QR مشخص شود.
+              </p>
+            )}
           </div>
         )}
 
