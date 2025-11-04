@@ -498,10 +498,10 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({
           <span className="text-xl font-bold align-middle">تکمیل سفارش</span>
           {orderType === "DINE_IN" && (
             <span
-              className={`inline-block align-middle ms-2 px-3 py-1 rounded-lg border text-sm ${
+              className={`inline-block align-middle ms-2 px-3 py-1 rounded-lg text-sm ${
                 tableId && tableId > 0
-                  ? "bg-gray-800 border-gray-600 text-white"
-                  : "bg-yellow-900/30 border-yellow-600 text-yellow-300"
+                  ? "bg-gray-800 text-white"
+                  : "bg-yellow-900/30 text-yellow-300"
               }`}
               title={
                 tableId && tableId > 0

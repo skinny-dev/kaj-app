@@ -255,7 +255,7 @@ export const initiatePayment = async (orderData: {
   paymentMethod: "online" | "cash";
   orderType?: "DELIVERY" | "PICKUP" | "DINE_IN";
   guestCount?: number;
-  tableId?: number;
+  tableId?: string | number;
 }): Promise<{
   success: boolean;
   paymentUrl?: string;
@@ -290,7 +290,7 @@ export const initiatePayment = async (orderData: {
         orderPayload.guestCount = orderData.guestCount;
       }
       if (orderData.tableId) {
-        orderPayload.tableId = orderData.tableId;
+        orderPayload.tableId = String(orderData.tableId);
       }
     }
 
