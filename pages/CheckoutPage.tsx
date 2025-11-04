@@ -494,29 +494,27 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({
         <button onClick={() => onNavigate("menu")} className="p-2">
           <ArrowRightIcon />
         </button>
-        <h1 className="text-xl font-bold flex-grow text-center">تکمیل سفارش</h1>
+        <div className="flex-grow text-center">
+          <span className="text-xl font-bold align-middle">تکمیل سفارش</span>
+          {orderType === "DINE_IN" && (
+            <span
+              className={`inline-block align-middle ms-2 px-3 py-1 rounded-lg border text-sm ${
+                tableId && tableId > 0
+                  ? "bg-gray-800 border-gray-600 text-white"
+                  : "bg-yellow-900/30 border-yellow-600 text-yellow-300"
+              }`}
+              title={
+                tableId && tableId > 0
+                  ? `میز ${tableId}`
+                  : "شماره میز از طریق QR مشخص می‌شود"
+              }
+            >
+              {tableId && tableId > 0 ? `میز ${tableId}` : "شماره میز نامشخص"}
+            </span>
+          )}
+        </div>
         <div className="w-10"></div> {/* Spacer */}
       </header>
-
-      {/* Dine-in table badge in header area */}
-      {orderType === "DINE_IN" && (
-        <div className="flex justify-center mb-4">
-          <div
-            className={`px-3 py-1 rounded-lg border text-sm ${
-              tableId && tableId > 0
-                ? "bg-gray-800 border-gray-600 text-white"
-                : "bg-yellow-900/30 border-yellow-600 text-yellow-300"
-            }`}
-            title={
-              tableId && tableId > 0
-                ? `میز ${tableId}`
-                : "شماره میز از طریق QR مشخص می‌شود"
-            }
-          >
-            {tableId && tableId > 0 ? `میز ${tableId}` : "شماره میز نامشخص"}
-          </div>
-        </div>
-      )}
 
       <form onSubmit={handleSubmit} className="space-y-6">
         <div>
