@@ -56,6 +56,12 @@ export const MenuPage: React.FC<MenuPageProps> = ({ onNavigate }) => {
           ? "?" + raw.slice(1).replaceAll("?", "&")
           : raw;
       const params = new URLSearchParams(normalized);
+      const normalizeDigits = (s: string) =>
+        s
+          // Persian digits ۰-۹
+          .replace(/[۰۱۲۳۴۵۶۷۸۹]/g, (d) => String("۰۱۲۳۴۵۶۷۸۹".indexOf(d)))
+          // Arabic-Indic digits ٠-٩
+          .replace(/[\u0660-\u0669]/g, (d) => String("٠١٢٣٤٥٦٧٨٩".indexOf(d)));
       const get = (k: string) => (params.get(k) || "").toLowerCase();
       const has = (k: string) => params.has(k);
       const truthy = (v: string) => ["1", "true", "yes", "y"].includes(v);
@@ -67,6 +73,7 @@ export const MenuPage: React.FC<MenuPageProps> = ({ onNavigate }) => {
       const guests = get("guests") || get("guest") || get("persons");
       const table =
         params.get("table") ||
+        params.get("tabel") ||
         params.get("tableId") ||
         params.get("desk") ||
         params.get("deskId") ||
@@ -86,14 +93,14 @@ export const MenuPage: React.FC<MenuPageProps> = ({ onNavigate }) => {
         localStorage.setItem("kaj-dinein", "1");
         localStorage.setItem("kaj-order-type", "DINE_IN");
         // Initialize guest count if provided or not set yet
-        const parsed = parseInt(guests, 10);
+  const parsed = parseInt(normalizeDigits(guests), 10);
         if (!Number.isNaN(parsed) && parsed > 0) {
           localStorage.setItem("kaj-guest-count", String(parsed));
         } else if (!localStorage.getItem("kaj-guest-count")) {
           localStorage.setItem("kaj-guest-count", "1");
         }
         // Persist table id if provided
-        const tParsed = parseInt((table || "").toString(), 10);
+  const tParsed = parseInt(normalizeDigits((table || "").toString()), 10);
         if (!Number.isNaN(tParsed) && tParsed > 0) {
           localStorage.setItem("kaj-table-id", String(tParsed));
         }

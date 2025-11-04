@@ -88,13 +88,20 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({
           ? "?" + raw.slice(1).replaceAll("?", "&")
           : raw;
       const params = new URLSearchParams(normalized);
+      const normalizeDigits = (s: string) =>
+        s
+          // Persian digits ۰-۹
+          .replace(/[۰۱۲۳۴۵۶۷۸۹]/g, (d) => String("۰۱۲۳۴۵۶۷۸۹".indexOf(d)))
+          // Arabic-Indic digits ٠-٩
+          .replace(/[\u0660-\u0669]/g, (d) => String("٠١٢٣٤٥٦٧٨٩".indexOf(d)));
       const t =
         params.get("table") ||
+        params.get("tabel") ||
         params.get("tableId") ||
         params.get("desk") ||
         params.get("deskId") ||
         "";
-      const fromUrl = t ? parseInt(String(t), 10) : NaN;
+      const fromUrl = t ? parseInt(normalizeDigits(String(t)), 10) : NaN;
       if (!Number.isNaN(fromUrl) && fromUrl > 0) return fromUrl;
       const stored = localStorage.getItem("kaj-table-id");
       const fromStore = stored ? parseInt(stored, 10) : NaN;
@@ -295,6 +302,7 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({
         ["salon", "سالن"].includes(salon) ||
         // If a table code is present, assume dine-in
         has("table") ||
+        has("tabel") ||
         has("tableId") ||
         has("desk") ||
         has("deskId");
