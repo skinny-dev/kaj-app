@@ -257,6 +257,7 @@ export const initiatePayment = async (orderData: {
   orderType?: "DELIVERY" | "PICKUP" | "DINE_IN";
   guestCount?: number;
   tableId?: string | number;
+  name?: string;
 }): Promise<{
   success: boolean;
   paymentUrl?: string;
@@ -272,6 +273,8 @@ export const initiatePayment = async (orderData: {
     const orderPayload: any = {
       type: normalizedType,
       address: orderData.deliveryAddress || "",
+      // Provide customer name when available so server can store/display it
+      customerName: orderData.name || undefined,
       phone: orderData.phone || "",
       notes: orderData.notes || undefined,
       items: orderData.items.map((item) => ({

@@ -50,6 +50,7 @@ const AppContent: React.FC = () => {
     isLoading: isAuthLoading,
     addAddress,
     refreshUser,
+    updateName,
   } = useAuth();
   const { clearCart, getCartTotal } = useCart();
 
@@ -103,9 +104,25 @@ const AppContent: React.FC = () => {
   // Triggered from OtpPage on success
   const handleOtpSuccess = () => {
     if (pendingOrderDetails) {
-      // The user is now logged in via AuthContext. Proceed to create the order.
-      handleCheckout(pendingOrderDetails);
-      setPendingOrderDetails(null);
+      // The user is now logged in via AuthContext. If we have a pending
+      // guest-provided name, save it to the profile before creating the order
+      // so the order isn't created as anonymous.
+      (async () => {
+        try {
+          if (pendingOrderDetails.name && updateName) {
+            await updateName(pendingOrderDetails.name);
+            // Refresh local user object to ensure server-side name is set
+            try {
+              await refreshUser();
+            } catch {}
+          }
+        } catch (e) {
+          console.warn("Failed to update name after OTP login", e);
+        }
+        // Proceed to create the order
+        await handleCheckout(pendingOrderDetails);
+        setPendingOrderDetails(null);
+      })();
     } else {
       // If there was no pending order, just go home (e.g., a regular login)
       navigateTo("home");
@@ -166,6 +183,7 @@ const AppContent: React.FC = () => {
           };
         }),
         deliveryAddress: details.address,
+        name: details.name,
         phone: details.phone,
         notes: details.notes,
         totalAmount: total,
